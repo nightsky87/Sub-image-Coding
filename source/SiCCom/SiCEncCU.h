@@ -3,6 +3,6 @@
 
 #include "ComDef.h"
 
-void SiCEncCU(cuStruct cu, u32 width, u32 height, paramStruct param);
+void SiCEncCU(cuStruct cu, u32 stride, paramStruct param);
 
 #endif

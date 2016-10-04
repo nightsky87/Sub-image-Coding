@@ -18,9 +18,9 @@ typedef struct paramStruct
 
 typedef struct cuStruct
 {
-	unsigned char *pY;
-	unsigned char *pCb;
-	unsigned char *pCr;
+	unsigned char *pLuma;
+	unsigned char *pChroma1;
+	unsigned char *pChroma2;
 };
 
 #endif

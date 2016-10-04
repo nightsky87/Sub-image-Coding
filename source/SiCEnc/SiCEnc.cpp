@@ -66,12 +66,13 @@ int main()
 	{
 		for (u32 x = 0; x < width; x += CU_SIZE)
 		{
-			cuStruct cu;
-			cu.pY = Y.data(x, y);
-			cu.pCb = Cb.data(x / 2, y / 2);
-			cu.pCr = Cr.data(x / 2, y / 2);
+			// Copy the CU pointers
+			static cuStruct cu;
+			cu.pLuma = &Y(x, y);
+			cu.pChroma1 = &Cb(x / 2, y / 2);
+			cu.pChroma2 = &Cr(x / 2, y / 2);
 
-			SiCEncCU(cu, width, height, param);
+			SiCEncCU(cu, width, param);
 		}
 	}
 
@@ -91,6 +92,6 @@ int main()
 	//}
 	//img.display();
 
-	system("PAUSE");
+	//system("PAUSE");
 	return 0;
 }
