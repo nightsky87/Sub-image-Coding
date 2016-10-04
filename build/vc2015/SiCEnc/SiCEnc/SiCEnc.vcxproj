@@ -148,10 +148,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\source\SiCCom\CImg.h" />
+    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComPred.h" />
+    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComQuant.h" />
+    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComTU.h" />
     <ClInclude Include="..\..\..\..\source\SiCCom\SiCEncCU.h" />
     <ClInclude Include="..\..\..\..\source\SiCCom\ComDef.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComPred.cpp" />
+    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComQuant.cpp" />
+    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComTU.cpp" />
     <ClCompile Include="..\..\..\..\source\SiCCom\SiCEncCU.cpp" />
     <ClCompile Include="..\..\..\..\source\SiCEnc\SiCEnc.cpp" />
   </ItemGroup>

@@ -36,13 +36,13 @@ int main()
 
 	// Manually define the parameters for now
 	paramStruct param;
-	param.q1 = 10;
-	param.q2 = 10;
+	param.q1 = 128;
+	param.q2 = 128;
 
 	// Allocate space for the YCbCr values
-	CImg<u8> Y(width, height);
-	CImg<u8> Cb(width, height);
-	CImg<u8> Cr(width, height);
+	CImg<s16> Y(width, height);
+	CImg<s16> Cb(width, height);
+	CImg<s16> Cr(width, height);
 
 	// Apply the JPEG YCbCr forward transform
 	const u32 chOffset = width * height;

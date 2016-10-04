@@ -12,15 +12,15 @@ typedef signed long		s32;
 
 typedef struct paramStruct
 {
-	unsigned char q1;
-	unsigned char q2;
+	u8 q1;
+	u8 q2;
 };
 
 typedef struct cuStruct
 {
-	unsigned char *pLuma;
-	unsigned char *pChroma1;
-	unsigned char *pChroma2;
+	s16 *pLuma;
+	s16 *pChroma1;
+	s16 *pChroma2;
 };
 
 #endif
