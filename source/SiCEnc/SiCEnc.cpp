@@ -48,9 +48,9 @@ int main()
 	const u32 chOffset = width * height;
 	for (u32 i = 0; i < chOffset; i++)
 	{
-		float y  = round(0.299 * (float)img(i) + 0.587 * (float)img(i + chOffset) + 0.114 * (float)img(i + 2 * chOffset));
-		float cb = round(128 - 0.168736 * (float)img(i) - 0.331264 * (float)img(i + chOffset) + 0.5 * (float)img(i + 2 * chOffset));
-		float cr = round(128 + 0.5 * (float)img(i) - 0.418688 * (float)img(i + chOffset) - 0.081312 * (float)img(i + 2 * chOffset));
+		float y  = roundf(0.299 * (float)img(i) + 0.587 * (float)img(i + chOffset) + 0.114 * (float)img(i + 2 * chOffset));
+		float cb = roundf(128 - 0.168736 * (float)img(i) - 0.331264 * (float)img(i + chOffset) + 0.5 * (float)img(i + 2 * chOffset));
+		float cr = roundf(128 + 0.5 * (float)img(i) - 0.418688 * (float)img(i + chOffset) - 0.081312 * (float)img(i + 2 * chOffset));
 
 		Y(i) = (y < 0) ? 0 : ((y > 255) ? 255 : y);
 		Cb(i) = (cb < 0) ? 0 : ((cb > 255) ? 255 : cb);
@@ -68,29 +68,29 @@ int main()
 		{
 			// Copy the CU pointers
 			static cuStruct cu;
-			cu.pLuma = &Y(x, y);
-			cu.pChroma1 = &Cb(x / 2, y / 2);
-			cu.pChroma2 = &Cr(x / 2, y / 2);
+			cu.cbLuma = &Y(x, y);
+			cu.cbChroma1 = &Cb(x / 2, y / 2);
+			cu.cbChroma2 = &Cr(x / 2, y / 2);
 
 			SiCEncCU(cu, width, param);
 		}
 	}
 
-	//Cb.resize_doubleXY();
-	//Cr.resize_doubleXY();
+	Cb.resize_doubleXY();
+	Cr.resize_doubleXY();
 
-	//// Apply the JPEG YCbCr forward transform
-	//for (u32 i = 0; i < chOffset; i++)
-	//{
-	//	float r = round((float)Y(i) + 1.402 * (float)(Cr(i) - 128));
-	//	float g = round((float)Y(i) - 0.344136 * (float)(Cb(i) - 128) - 0.714136 * (float)(Cr(i) - 128));
-	//	float b = round((float)Y(i) + 1.772 * (float)(Cb(i) - 128));
+	// Apply the JPEG YCbCr forward transform
+	for (u32 i = 0; i < chOffset; i++)
+	{
+		float r = round((float)Y(i) + 1.402 * (float)(Cr(i) - 128));
+		float g = round((float)Y(i) - 0.344136 * (float)(Cb(i) - 128) - 0.714136 * (float)(Cr(i) - 128));
+		float b = round((float)Y(i) + 1.772 * (float)(Cb(i) - 128));
 
-	//	img(i) = (r < 0) ? 0 : ((r > 255) ? 255 : r);
-	//	img(i + chOffset) = (g < 0) ? 0 : ((g > 255) ? 255 : g);
-	//	img(i + 2 * chOffset) = (b < 0) ? 0 : ((b > 255) ? 255 : b);
-	//}
-	//img.display();
+		img(i) = (r < 0) ? 0 : ((r > 255) ? 255 : r);
+		img(i + chOffset) = (g < 0) ? 0 : ((g > 255) ? 255 : g);
+		img(i + 2 * chOffset) = (b < 0) ? 0 : ((b > 255) ? 255 : b);
+	}
+	img.display();
 
 	//system("PAUSE");
 	return 0;

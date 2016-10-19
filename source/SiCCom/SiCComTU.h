@@ -3,9 +3,13 @@
 
 #include "ComDef.h"
 
-void vstuForward(cuStruct cu);
-void vstuInverse(cuStruct cu);
-void hstuForward(cuStruct cu);
-void hstuInverse(cuStruct cu);
+void stuForward(stuStruct stu);
+void stuInverse(stuStruct stu);
+void vstuForward(scuStruct *scu);
+void vstuInverse(scuStruct *scu);
+void hstuForward(scuStruct *scu);
+void hstuInverse(scuStruct *scu);
+void rtuForward(rtuStruct rtu);
+void rtuInverse(rtuStruct rtu);
 
 #endif
