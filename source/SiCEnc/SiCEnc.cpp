@@ -9,7 +9,7 @@ using namespace cimg_library;
 int main()
 {
 	// Load a test image
-	CImg<u8> img("../../../../images/Kodak/kodim23.bmp");
+	CImg<s16> img("../../../../images/Kodak/kodim23.bmp");
 
 	// Determine the original dimensions
 	u32 trueWidth = img.width();
@@ -48,13 +48,13 @@ int main()
 	const u32 chOffset = width * height;
 	for (u32 i = 0; i < chOffset; i++)
 	{
-		float y  = roundf(0.299 * (float)img(i) + 0.587 * (float)img(i + chOffset) + 0.114 * (float)img(i + 2 * chOffset));
-		float cb = roundf(128 - 0.168736 * (float)img(i) - 0.331264 * (float)img(i + chOffset) + 0.5 * (float)img(i + 2 * chOffset));
-		float cr = roundf(128 + 0.5 * (float)img(i) - 0.418688 * (float)img(i + chOffset) - 0.081312 * (float)img(i + 2 * chOffset));
+		double y  = round(0.299 * (double)img(i) + 0.587 * (double)img(i + chOffset) + 0.114 * (double)img(i + 2 * chOffset));
+		double cb = round(128 - 0.168736 * (double)img(i) - 0.331264 * (double)img(i + chOffset) + 0.5 * (double)img(i + 2 * chOffset));
+		double cr = round(128 + 0.5 * (double)img(i) - 0.418688 * (double)img(i + chOffset) - 0.081312 * (double)img(i + 2 * chOffset));
 
-		Y(i) = (y < 0) ? 0 : ((y > 255) ? 255 : y);
-		Cb(i) = (cb < 0) ? 0 : ((cb > 255) ? 255 : cb);
-		Cr(i) = (cr < 0) ? 0 : ((cr > 255) ? 255 : cr);
+		Y(i) = (s16)((y < 0) ? 0 : ((y > 255) ? 255 : y));
+		Cb(i) = (s16)((cb < 0) ? 0 : ((cb > 255) ? 255 : cb));
+		Cr(i) = (s16)((cr < 0) ? 0 : ((cr > 255) ? 255 : cr));
 	}
 
 	// Downsample the chroma channels
@@ -82,13 +82,13 @@ int main()
 	// Apply the JPEG YCbCr forward transform
 	for (u32 i = 0; i < chOffset; i++)
 	{
-		float r = round((float)Y(i) + 1.402 * (float)(Cr(i) - 128));
-		float g = round((float)Y(i) - 0.344136 * (float)(Cb(i) - 128) - 0.714136 * (float)(Cr(i) - 128));
-		float b = round((float)Y(i) + 1.772 * (float)(Cb(i) - 128));
+		double r = round((double)Y(i) + 1.402 * (double)(Cr(i) - 128));
+		double g = round((double)Y(i) - 0.344136 * (double)(Cb(i) - 128) - 0.714136 * (double)(Cr(i) - 128));
+		double b = round((double)Y(i) + 1.772 * (double)(Cb(i) - 128));
 
-		img(i) = (r < 0) ? 0 : ((r > 255) ? 255 : r);
-		img(i + chOffset) = (g < 0) ? 0 : ((g > 255) ? 255 : g);
-		img(i + 2 * chOffset) = (b < 0) ? 0 : ((b > 255) ? 255 : b);
+		img(i) = (s16)((r < 0) ? 0 : ((r > 255) ? 255 : r));
+		img(i + chOffset) = (s16)((g < 0) ? 0 : ((g > 255) ? 255 : g));
+		img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
 	}
 	img.display();
 

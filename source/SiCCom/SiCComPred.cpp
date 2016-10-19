@@ -220,7 +220,7 @@ void predSearchBlock(s16 *pbChroma1, s16 *pbChroma2, u8 *modeLuma, u8 *modeChrom
 	static s16 pbEstChroma1[81], pbEstChroma2[81];
 
 	// Generate a unique list of modes for searching
-	static s16 modeSearch[4];
+	static u8 modeSearch[4];
 
 	// Copy the corresponding luma modes
 	modeSearch[0] = modeLuma[0];

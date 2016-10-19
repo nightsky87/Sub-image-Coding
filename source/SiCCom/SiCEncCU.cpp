@@ -179,6 +179,9 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	static rtuStruct rtu = { cbResLuma, cbResChroma1, cbResChroma2 };
 	rtuForward(rtu);
 	rtuQuantConst(rtu, param.q2);
+
+	// INSERT CABAC ROUTINE HERE
+
 	rtuDequantConst(rtu, param.q2);
 	rtuInverse(rtu);
 
