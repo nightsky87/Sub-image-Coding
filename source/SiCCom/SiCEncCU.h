@@ -5,6 +5,7 @@
 #include "SiCComTU.h"
 #include "SiCComQuant.h"
 #include "SiCComPred.h"
+#include "SiCComBAC.h"
 #include <cstring>
 
 void SiCEncCU(cuStruct cu, u32 stride, paramStruct param);

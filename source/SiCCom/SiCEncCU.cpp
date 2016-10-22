@@ -77,10 +77,7 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 
 	// Quantize the STU
 	stuQuantConst(stu, param.q1);
-
-	// INSERT CABAC ROUTINE HERE
-
-	// Dequantize the sub-image coefficients
+	stuEnc(stu);
 	stuDequantConst(stu, param.q1);
 
 	// Apply the inverse DCT to the sub-images

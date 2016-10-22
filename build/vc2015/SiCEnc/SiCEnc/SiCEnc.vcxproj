@@ -148,6 +148,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\source\SiCCom\CImg.h" />
+    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComBAC.h" />
+    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComBACContexts.h" />
+    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComBACCore.h" />
     <ClInclude Include="..\..\..\..\source\SiCCom\SiCComPred.h" />
     <ClInclude Include="..\..\..\..\source\SiCCom\SiCComQuant.h" />
     <ClInclude Include="..\..\..\..\source\SiCCom\SiCComTU.h" />
@@ -155,6 +158,8 @@
     <ClInclude Include="..\..\..\..\source\SiCCom\ComDef.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComBAC.cpp" />
+    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComBACCore.cpp" />
     <ClCompile Include="..\..\..\..\source\SiCCom\SiCComPred.cpp" />
     <ClCompile Include="..\..\..\..\source\SiCCom\SiCComQuant.cpp" />
     <ClCompile Include="..\..\..\..\source\SiCCom\SiCComTU.cpp" />

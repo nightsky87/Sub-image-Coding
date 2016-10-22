@@ -1,6 +1,7 @@
 #include "CImg.h"
 #include "ComDef.h"
 #include "SiCEncCU.h"
+#include "SiCComBACCore.h"
 
 #include <cassert>
 
@@ -60,6 +61,9 @@ int main()
 	// Downsample the chroma channels
 	Cb.resize_halfXY();
 	Cr.resize_halfXY();
+
+	// Initialize the arithmetic encoder assuming 12 bits per pixel
+	InitializeEncoder(12 * width * height);
 
 	// Process each coding unit (CU)
 	for (u32 y = 0; y < height; y += CU_SIZE)

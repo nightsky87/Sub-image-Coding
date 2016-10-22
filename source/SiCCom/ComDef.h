@@ -50,4 +50,17 @@ typedef struct
 	s16 *rtbChroma2;
 } rtuStruct;
 
+enum component
+{
+	COMPONENT_LUMA,
+	COMPONENT_CHROMA
+};
+
+enum scanDir
+{
+	SCAN_VERT,
+	SCAN_HORZ,
+	SCAN_DIAG
+};
+
 #endif
