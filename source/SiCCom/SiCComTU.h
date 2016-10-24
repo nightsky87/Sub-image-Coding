@@ -12,4 +12,8 @@ void hstuInverse(scuStruct *scu);
 void rtuForward(rtuStruct rtu);
 void rtuInverse(rtuStruct rtu);
 
+s16 coeffCast(s32 val);
+s16 pixelCast(s32 val);
+s16 residualCast(s32 val);
+
 #endif

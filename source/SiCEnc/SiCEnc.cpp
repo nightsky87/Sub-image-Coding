@@ -38,7 +38,7 @@ int main()
 	// Manually define the parameters for now
 	paramStruct param;
 	param.q1 = 128;
-	param.q2 = 128;
+	param.q2 = param.q1;
 
 	// Allocate space for the YCbCr values
 	CImg<s16> Y(width, height);

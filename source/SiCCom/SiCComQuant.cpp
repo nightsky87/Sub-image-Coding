@@ -28,17 +28,17 @@ void stuDequantConst(stuStruct stu, u16 qp)
 	// Dequantize all coefficients of the STBs with the same factor
 	for (u16 i = 0; i < scbNumPix / 4; i++)
 	{
-		stu.hscu->scbLuma[i] = (s16)((float)stu.hscu->scbLuma[i] * qp + 0.5);
-		stu.hscu->scbChroma1[i] = (s16)((float)stu.hscu->scbChroma1[i] * qp + 0.5);
-		stu.hscu->scbChroma2[i] = (s16)((float)stu.hscu->scbChroma2[i] * qp + 0.5);
-		stu.vscu->scbLuma[i] = (s16)((float)stu.vscu->scbLuma[i] * qp + 0.5);
-		stu.vscu->scbChroma1[i] = (s16)((float)stu.vscu->scbChroma1[i] * qp + 0.5);
-		stu.vscu->scbChroma2[i] = (s16)((float)stu.vscu->scbChroma2[i] * qp + 0.5);
+		stu.hscu->scbLuma[i] = coeffCast((float)stu.hscu->scbLuma[i] * qp + 0.5);
+		stu.hscu->scbChroma1[i] = coeffCast((float)stu.hscu->scbChroma1[i] * qp + 0.5);
+		stu.hscu->scbChroma2[i] = coeffCast((float)stu.hscu->scbChroma2[i] * qp + 0.5);
+		stu.vscu->scbLuma[i] = coeffCast((float)stu.vscu->scbLuma[i] * qp + 0.5);
+		stu.vscu->scbChroma1[i] = coeffCast((float)stu.vscu->scbChroma1[i] * qp + 0.5);
+		stu.vscu->scbChroma2[i] = coeffCast((float)stu.vscu->scbChroma2[i] * qp + 0.5);
 	}
 	for (u16 i = scbNumPix / 4; i < scbNumPix; i++)
 	{
-		stu.hscu->scbLuma[i] = (s16)((float)stu.hscu->scbLuma[i] * qp + 0.5);
-		stu.vscu->scbLuma[i] = (s16)((float)stu.vscu->scbLuma[i] * qp + 0.5);
+		stu.hscu->scbLuma[i] = coeffCast((float)stu.hscu->scbLuma[i] * qp + 0.5);
+		stu.vscu->scbLuma[i] = coeffCast((float)stu.vscu->scbLuma[i] * qp + 0.5);
 	}
 }
 
@@ -74,20 +74,25 @@ void rtuDequantConst(rtuStruct rtu, u16 qp)
 	{
 		for (u8 x = 0; x < CU_SIZE / 2; x++)
 		{
-			rtu.rtbLuma[CU_SIZE * y + x] = (s16)((float)rtu.rtbLuma[CU_SIZE * y + x] * qp + 0.5);
-			rtu.rtbChroma1[CU_SIZE / 2 * y + x] = (s16)((float)rtu.rtbChroma1[CU_SIZE / 2 * y + x] * qp + 0.5);
-			rtu.rtbChroma2[CU_SIZE / 2 * y + x] = (s16)((float)rtu.rtbChroma2[CU_SIZE / 2 * y + x] * qp + 0.5);
+			rtu.rtbLuma[CU_SIZE * y + x] = coeffCast((float)rtu.rtbLuma[CU_SIZE * y + x] * qp + 0.5);
+			rtu.rtbChroma1[CU_SIZE / 2 * y + x] = coeffCast((float)rtu.rtbChroma1[CU_SIZE / 2 * y + x] * qp + 0.5);
+			rtu.rtbChroma2[CU_SIZE / 2 * y + x] = coeffCast((float)rtu.rtbChroma2[CU_SIZE / 2 * y + x] * qp + 0.5);
 		}
 		for (u8 x = CU_SIZE / 2; x < CU_SIZE; x++)
 		{
-			rtu.rtbLuma[CU_SIZE * y + x] = (s16)((float)rtu.rtbLuma[CU_SIZE * y + x] * qp + 0.5);
+			rtu.rtbLuma[CU_SIZE * y + x] = coeffCast((float)rtu.rtbLuma[CU_SIZE * y + x] * qp + 0.5);
 		}
 	}
 	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
 	{
 		for (u8 x = 0; x < CU_SIZE; x++)
 		{
-			rtu.rtbLuma[CU_SIZE * y + x] = (s16)((float)rtu.rtbLuma[CU_SIZE * y + x] * qp + 0.5);
+			rtu.rtbLuma[CU_SIZE * y + x] = coeffCast((float)rtu.rtbLuma[CU_SIZE * y + x] * qp + 0.5);
 		}
 	}
+}
+
+s16 coeffCast(float val)
+{
+	return ((val < -32768) ? -32768 : ((val > 32767) ? 32767 : val));
 }

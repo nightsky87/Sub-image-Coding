@@ -8,4 +8,6 @@ void stuDequantConst(stuStruct stu, u16 qp);
 void rtuQuantConst(rtuStruct rtu, u16 qp);
 void rtuDequantConst(rtuStruct rtu, u16 qp);
 
+s16 coeffCast(float val);
+
 #endif

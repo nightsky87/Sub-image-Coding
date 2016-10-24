@@ -211,6 +211,10 @@ void stbEnc(s16 *stb, component comp, scanDir dir)
 	}
 	EncodeDecision(ctxBase + CTX_STB_NUM_SIG_OFFSET, 0);
 
+	// Bypass the block coding if no significant coefficients are found
+	if (numSig == 0)
+		return;
+
 	// Signal the significance map
 	u8 curSig = 0;
 	for (u8 i = 0; i < 16; i++)
@@ -236,13 +240,12 @@ void stbEnc(s16 *stb, component comp, scanDir dir)
 
 		if (coeffAbs > 1)
 		{
-			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_1, 1);
+			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_1_OFFSET, 1);
 		}
 		else
 		{
-			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_1, 0);
+			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_1_OFFSET, 0);
 			EncodeBypass((u8)(coeffVal[i] < 0));
-			coeffVal[i] = 0;
 		}
 	}
 
@@ -253,12 +256,12 @@ void stbEnc(s16 *stb, component comp, scanDir dir)
 
 		if (coeffAbs > 2)
 		{
-			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_2, 1);
+			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_2_OFFSET, 1);
 			coeffVal[i] = coeffVal[i] < 0 ? coeffVal[i] + 2 : coeffVal[i] - 2;
 		}
-		else
+		else if (coeffAbs == 2)
 		{
-			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_2, 0);
+			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_2_OFFSET, 0);
 			EncodeBypass((u8)(coeffVal[i] < 0));
 			coeffVal[i] = 0;
 		}
@@ -277,12 +280,17 @@ void stbEnc(s16 *stb, component comp, scanDir dir)
 				msb--;
 
 			for (u8 j = 0; j < msb; j++)
-				EncodeBypass(0);
+				EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_LEVEL_OFFSET, 1);
+			EncodeDecision(ctxBase + CTX_STB_ABS_COEFF_LEVEL_OFFSET, 0);
 
-			for (s8 j = msb; j >= 0; j--)
+			for (s8 j = msb - 1; j >= 0; j--)
 				EncodeBypass((coeffAbs >> j) & 1);
 
 			EncodeBypass((u8)(coeffVal[i] < 0));
 		}
 	}
+}
+
+void puEnc(puStruct pu)
+{
 }
