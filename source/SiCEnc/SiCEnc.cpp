@@ -80,6 +80,10 @@ int main()
 		}
 	}
 
+	// Terminate the encoding process and write to file
+	EncodeTerminate();
+	WriteBitstream("test.sic", trueWidth, trueHeight, 3, param);
+
 	Cb.resize_doubleXY();
 	Cr.resize_doubleXY();
 
@@ -94,7 +98,7 @@ int main()
 		img(i + chOffset) = (s16)((g < 0) ? 0 : ((g > 255) ? 255 : g));
 		img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
 	}
-	img.display();
+	//img.display();
 
 	//system("PAUSE");
 	return 0;

@@ -8,8 +8,8 @@ void predSearch(puStruct pu);
 void predSearchLuma(puStruct pu);
 void predSearchChroma(puStruct pu);
 
-void predSearchBlock(s16 *pb, u8 *mode);
-void predSearchBlock(s16 *pbChroma1, s16 *pbChroma2, u8 *modeLuma, u8 *modeChroma);
+void predSearchBlock(s16 *pb, u8 *mode, scanDir *scan);
+void predSearchBlock(s16 *pbChroma1, s16 *pbChroma2, u8 *modeLuma, u8 *modeChroma, scanDir *scan);
 void predBlock(s16 *pb, u8 mode);
 
 void predUPM(s16 *pb, u8 dir);

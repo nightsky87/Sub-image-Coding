@@ -542,28 +542,6 @@ void hstuInverse(scuStruct *scu)
 			scu->scbLuma[(y + 3) * CU_SIZE / 8 + x] = pixelCast((v0 + v3) >> 12);
 		}
 	}
-
-	//// Perform a value saturation operation to keep all pixels within the [0, 255] range
-	//for (u8 y = 0; y < CU_SIZE / 2; y++)
-	//{
-	//	for (u8 x = 0; x < CU_SIZE / 16; x++)
-	//	{
-	//		scu->scbLuma[y * CU_SIZE / 8 + x] = (scu->scbLuma[y * CU_SIZE / 8 + x] < 0) ? 0 : ((scu->scbLuma[y * CU_SIZE / 8 + x] > 255) ? 255 : scu->scbLuma[y * CU_SIZE / 8 + x]);
-	//		scu->scbChroma1[y * CU_SIZE / 16 + x] = (scu->scbChroma1[y * CU_SIZE / 16 + x] < 0) ? 0 : ((scu->scbChroma1[y * CU_SIZE / 16 + x] > 255) ? 255 : scu->scbChroma1[y * CU_SIZE / 16 + x]);
-	//		scu->scbChroma2[y * CU_SIZE / 16 + x] = (scu->scbChroma2[y * CU_SIZE / 16 + x] < 0) ? 0 : ((scu->scbChroma2[y * CU_SIZE / 16 + x] > 255) ? 255 : scu->scbChroma2[y * CU_SIZE / 16 + x]);
-	//	}
-	//	for (u8 x = CU_SIZE / 16; x < CU_SIZE / 8; x++)
-	//	{
-	//		scu->scbLuma[y * CU_SIZE / 8 + x] = (scu->scbLuma[y * CU_SIZE / 8 + x] < 0) ? 0 : ((scu->scbLuma[y * CU_SIZE / 8 + x] > 255) ? 255 : scu->scbLuma[y * CU_SIZE / 8 + x]);
-	//	}
-	//}
-	//for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
-	//{
-	//	for (u8 x = 0; x < CU_SIZE / 8; x++)
-	//	{
-	//		scu->scbLuma[y * CU_SIZE / 8 + x] = (scu->scbLuma[y * CU_SIZE / 8 + x] < 0) ? 0 : ((scu->scbLuma[y * CU_SIZE / 8 + x] > 255) ? 255 : scu->scbLuma[y * CU_SIZE / 8 + x]);
-	//	}
-	//}
 }
 
 void rtuForward(rtuStruct rtu)

@@ -7,8 +7,8 @@ static u8 bitPos;
 static u8 byteBuffer;
 static u8 bitsOutstanding;
 
-static u16 ctx[NUM_TOTAL_CONTEXT];
-static u16 mps[NUM_TOTAL_CONTEXT];
+static u8 ctx[NUM_TOTAL_CONTEXT];
+static u8 mps[NUM_TOTAL_CONTEXT];
 static u16 codILow = 0x000;
 static u16 codIRange = 0x1FE;
 
@@ -170,6 +170,22 @@ void EncodeTerminate()
 	PutBit((codILow >> 9) & 1);
 	PutBit((((codILow >> 7) & 3 | 1) >> 1) & 1);
 	PutBit(((codILow >> 7) & 3 | 1) & 1);
+}
+
+void WriteBitstream(char *fName, u16 width, u16 height, u8 channels, paramStruct param)
+{
+	FILE *fh;
+	if (fopen_s(&fh, fName, "wb"))
+		printf("Cannot create output file.\n");
+	
+	fwrite(&width, sizeof(u16), 1, fh);
+	fwrite(&height, sizeof(u16), 1, fh);
+	fwrite(&channels, sizeof(u8), 1, fh);
+	fwrite(&param, sizeof(paramStruct), 1, fh);
+
+	u32 numBytes = pByteCur - pBitstream + 1;
+	fwrite(pBitstream, sizeof(u8), numBytes, fh);
+	fclose(fh);
 }
 
 //void OpenFileEnc(char* fName, u16 width, u16 height, u8 channels, u8 qp)

@@ -10,6 +10,19 @@ typedef signed char		s8;
 typedef signed short	s16;
 typedef signed long		s32;
 
+enum component
+{
+	COMPONENT_LUMA,
+	COMPONENT_CHROMA
+};
+
+enum scanDir
+{
+	SCAN_VERT,
+	SCAN_HORZ,
+	SCAN_DIAG
+};
+
 typedef struct
 {
 	u16 q1;
@@ -41,6 +54,8 @@ typedef struct
 	cuStruct *cu;
 	u8 *modeLuma;
 	u8 *modeChroma;
+	scanDir *scanLuma;
+	scanDir *scanChroma;
 } puStruct;
 
 typedef struct 
@@ -48,19 +63,8 @@ typedef struct
 	s16 *rtbLuma;
 	s16 *rtbChroma1;
 	s16 *rtbChroma2;
+	scanDir *scanLuma;
+	scanDir *scanChroma;
 } rtuStruct;
-
-enum component
-{
-	COMPONENT_LUMA,
-	COMPONENT_CHROMA
-};
-
-enum scanDir
-{
-	SCAN_VERT,
-	SCAN_HORZ,
-	SCAN_DIAG
-};
 
 #endif

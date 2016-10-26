@@ -18,9 +18,6 @@
     <ClInclude Include="..\..\..\..\source\SiCCom\CImg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCCom\SiCEncCU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\..\source\SiCCom\ComDef.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -42,12 +39,12 @@
     <ClInclude Include="..\..\..\..\source\SiCCom\SiCComBACContexts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\source\SiCEnc\SiCEncCU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\source\SiCEnc\SiCEnc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\source\SiCCom\SiCEncCU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\source\SiCCom\SiCComTU.cpp">
@@ -63,6 +60,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\source\SiCCom\SiCComBACCore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\source\SiCEnc\SiCEncCU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

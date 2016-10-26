@@ -153,12 +153,13 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	static cuStruct thisCU = { cbLuma, cbChroma1, cbChroma2 };
 	static u8 pbModeLuma[cbNumPix >> 6];
 	static u8 pbModeChroma[cbNumPix >> 8];
-	static puStruct pu = { &thisCU, pbModeLuma, pbModeChroma };
+	static scanDir scanLuma[cbNumPix >> 6];
+	static scanDir scanChroma[cbNumPix >> 8];
+	static puStruct pu = { &thisCU, pbModeLuma, pbModeChroma, scanLuma, scanChroma };
 
 	// Find the optimal predictors and apply to the PU
 	predSearch(pu);
-
-	// INSERT CABAC ROUTINE HERE
+	puEnc(pu);
 
 	// Calculate the residual
 	for (u16 i = 0; i < cbNumPix / 4; i++)
@@ -173,11 +174,11 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	}
 
 	// Transform the residual
-	static rtuStruct rtu = { cbResLuma, cbResChroma1, cbResChroma2 };
+	static rtuStruct rtu = { cbResLuma, cbResChroma1, cbResChroma2, scanLuma, scanChroma };
 	rtuForward(rtu);
 	rtuQuantConst(rtu, param.q2);
 
-	// INSERT CABAC ROUTINE HERE
+	rtuEnc(rtu);
 
 	rtuDequantConst(rtu, param.q2);
 	rtuInverse(rtu);

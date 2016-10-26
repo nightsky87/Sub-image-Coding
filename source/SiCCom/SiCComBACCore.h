@@ -5,6 +5,7 @@
 #include "SiCComBACContexts.h"
 #include <cstring>
 #include <cstdlib>
+#include <cstdio>
 
 u16 rangeTabLPS(u8 pStateIdx, u8 qCodIRangeIdx);
 u8 transIdxLPS(u8 pStateIdx);
@@ -14,5 +15,6 @@ void EncodeDecision(u8 ctxIdx, u8 binVal);
 void EncodeBypass(u8 binVal);
 void EncodeTerminate();
 void PutBit(u8 B);
+void WriteBitstream(char *fName, u16 width, u16 height, u8 channels, paramStruct param);
 
 #endif
