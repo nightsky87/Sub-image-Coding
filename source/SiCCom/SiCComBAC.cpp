@@ -361,37 +361,39 @@ void puEncLuma(puStruct pu)
 		if (pu.modeLuma[CU_SIZE / 8 * y] == 0)
 		{
 			EncodeDecision(CTX_PB_LUMA_MODE_DC, 1);
-			continue;
-		}
-		EncodeDecision(CTX_PB_LUMA_MODE_DC, 0);
-
-		if (pu.modeLuma[CU_SIZE / 8 * (y - 1)] != 0)
-		{
-			u8 dir = (pu.modeLuma[CU_SIZE / 8 * y] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * y] - 1) : (pu.modeLuma[CU_SIZE / 8 * y] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * y] - 17) : (pu.modeLuma[CU_SIZE / 8 * y] - 25));
-			u8 dirSrc = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
-
-			if (pu.modeLuma[CU_SIZE / 8 * (y - 1)] == pu.modeLuma[CU_SIZE / 8 * y])
-			{
-				EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
-			}
-			else if (dirSrc == dir)
-			{
-				EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
-				EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
-				puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
-			}
-			else
-			{
-				EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
-				EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
-				puEncDir(pu.modeLuma[CU_SIZE / 8 * y]);
-				puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
-			}
 		}
 		else
 		{
-			puEncDir(pu.modeLuma[CU_SIZE / 8 * y]);
-			puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+			EncodeDecision(CTX_PB_LUMA_MODE_DC, 0);
+
+			if (pu.modeLuma[CU_SIZE / 8 * (y - 1)] != 0)
+			{
+				u8 dir = (pu.modeLuma[CU_SIZE / 8 * y] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * y] - 1) : (pu.modeLuma[CU_SIZE / 8 * y] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * y] - 17) : (pu.modeLuma[CU_SIZE / 8 * y] - 25));
+				u8 dirSrc = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
+
+				if (pu.modeLuma[CU_SIZE / 8 * y] == pu.modeLuma[CU_SIZE / 8 * (y - 1)])
+				{
+					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
+				}
+				//else if (dir == dirSrc)
+				//{
+				//	EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
+				//	EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
+				//	puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+				//}
+				else
+				{
+					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
+					//EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
+					puEncDir(pu.modeLuma[CU_SIZE / 8 * y]);
+					puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+				}
+			}
+			else
+			{
+				puEncDir(pu.modeLuma[CU_SIZE / 8 * y]);
+				puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+			}
 		}
 
 		// Encode the remaining PBs of each row
@@ -572,6 +574,7 @@ void rtuEnc(rtuStruct rtu)
 		for (u8 x = 0; x < CU_SIZE / 2; x += 8)
 		{
 			rtbEnc(&rtu.rtbChroma1[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
+			rtbEnc(&rtu.rtbChroma2[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
 		}
 	}
 }
@@ -591,7 +594,8 @@ void rtbEnc(s16 *rtb, component comp, scanDir dir)
 			memcpy(&rtbOrd[7 * y], &rtb[stride * y], 7 * sizeof(s16));
 		}
 	}
-	else if (dir == SCAN_VERT)
+	else
+	//else if (dir == SCAN_VERT)
 	{
 		for (u8 x = 0; x < 7; x++)
 		{
@@ -601,30 +605,30 @@ void rtbEnc(s16 *rtb, component comp, scanDir dir)
 			}
 		}
 	}
-	else
-	{
-		u8 ind = 0;
-		for (u8 i = 0; i < 7; i++)
-		{
-			u8 x = 0;
-			for (s8 y = i; y >= 0; y--)
-			{
-				rtbOrd[ind] = rtb[stride * y + x];
-				x++;
-				ind++;
-			}
-		}
-		for (u8 i = 1; i < 7; i++)
-		{
-			u8 y = 6;
-			for (u8 x = i; x < 7; x++)
-			{
-				rtbOrd[ind] = rtb[stride * y + x];
-				y--;
-				ind++;
-			}
-		}
-	}
+	//else
+	//{
+	//	u8 ind = 0;
+	//	for (u8 i = 0; i < 7; i++)
+	//	{
+	//		u8 x = 0;
+	//		for (s8 y = i; y >= 0; y--)
+	//		{
+	//			rtbOrd[ind] = rtb[stride * y + x];
+	//			x++;
+	//			ind++;
+	//		}
+	//	}
+	//	for (u8 i = 1; i < 7; i++)
+	//	{
+	//		u8 y = 6;
+	//		for (u8 x = i; x < 7; x++)
+	//		{
+	//			rtbOrd[ind] = rtb[stride * y + x];
+	//			y--;
+	//			ind++;
+	//		}
+	//	}
+	//}
 
 	// Determine the index of the last significant coefficient in the STB
 	s8 lastSig = 48;
@@ -809,13 +813,13 @@ void hstbDec(scuStruct *scu)
 	{
 		// Process the top luma STB
 		stbDec(&scu->scbLuma[x], COMPONENT_LUMA, SCAN_HORZ);
-		scu->scbLuma[x] = scu->scbLuma[x - 4];
+		scu->scbLuma[x] += scu->scbLuma[x - 4];
 
 		// Process the remaining luma STBs
 		for (u8 y = 4; y < CU_SIZE; y += 4)
 		{
 			stbDec(&scu->scbLuma[CU_SIZE / 8 * y + x], COMPONENT_LUMA, SCAN_HORZ);
-			scu->scbLuma[CU_SIZE / 8 * y + x] = scu->scbLuma[CU_SIZE / 8 * (y - 4) + x];
+			scu->scbLuma[CU_SIZE / 8 * y + x] += scu->scbLuma[CU_SIZE / 8 * (y - 4) + x];
 		}
 	}
 
@@ -825,10 +829,10 @@ void hstbDec(scuStruct *scu)
 	for (u8 y = 4; y < CU_SIZE / 2; y += 4)
 	{
 		stbDec(&scu->scbChroma1[CU_SIZE / 16 * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma1[CU_SIZE / 16 * y] = scu->scbChroma1[CU_SIZE / 16 * (y - 4)];
+		scu->scbChroma1[CU_SIZE / 16 * y] += scu->scbChroma1[CU_SIZE / 16 * (y - 4)];
 
 		stbDec(&scu->scbChroma2[CU_SIZE / 16 * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma2[CU_SIZE / 16 * y] = scu->scbChroma2[CU_SIZE / 16 * (y - 4)];
+		scu->scbChroma2[CU_SIZE / 16 * y] += scu->scbChroma2[CU_SIZE / 16 * (y - 4)];
 	}
 
 #if CU_SIZE > 64
@@ -837,19 +841,19 @@ void hstbDec(scuStruct *scu)
 	{
 		// Process the top chroma STB
 		stbDec(&scu->scbChroma1[x], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma1[x] = scu->scbChroma1[x - 4];
+		scu->scbChroma1[x] += scu->scbChroma1[x - 4];
 
 		stbDec(&scu->scbChroma2[x], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma2[x] = scu->scbChroma2[x - 4];
+		scu->scbChroma2[x] += scu->scbChroma2[x - 4];
 
 		// Process the remaining chroma STBs
 		for (u8 y = 4; y < CU_SIZE; y += 4)
 		{
 			stbDec(&scu->scbChroma1[CU_SIZE / 16 * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma1[CU_SIZE / 16 * y + x] = scu->scbChroma1[CU_SIZE / 16 * (y - 4) + x];
+			scu->scbChroma1[CU_SIZE / 16 * y + x] += scu->scbChroma1[CU_SIZE / 16 * (y - 4) + x];
 
 			stbDec(&scu->scbChroma2[CU_SIZE / 16 * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma2[CU_SIZE / 16 * y + x] = scu->scbChroma2[CU_SIZE / 16 * (y - 4) + x];
+			scu->scbChroma2[CU_SIZE / 16 * y + x] += scu->scbChroma2[CU_SIZE / 16 * (y - 4) + x];
 		}
 	}
 #endif
@@ -1038,22 +1042,28 @@ void puDecLuma(puStruct pu)
 		if (DecodeDecision(CTX_PB_LUMA_MODE_DC))
 		{
 			pu.modeLuma[CU_SIZE / 8 * y] = 0;
-			continue;
 		}
-
-		if (pu.modeLuma[CU_SIZE / 8 * (y - 1)] != 0)
+		else
 		{
-			u8 dirSrc = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
+			if (pu.modeLuma[CU_SIZE / 8 * (y - 1)] != 0)
+			{
 
-			if (DecodeDecision(CTX_PB_LUMA_COPY_MODE))
-			{
-				pu.modeLuma[CU_SIZE / 8 * y] = pu.modeLuma[CU_SIZE / 8 * (y - 1)];
-			}
-			else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
-			{
-				u8 dir = dirSrc;
-				u8 type = puDecType();
-				pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+				if (DecodeDecision(CTX_PB_LUMA_COPY_MODE))
+				{
+					pu.modeLuma[CU_SIZE / 8 * y] = pu.modeLuma[CU_SIZE / 8 * (y - 1)];
+				}
+				//else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
+				//{
+				//	u8 dir = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
+				//	u8 type = puDecType();
+				//	pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+				//}
+				else
+				{
+					u8 dir = puDecDir();
+					u8 type = puDecType();
+					pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+				}
 			}
 			else
 			{
@@ -1061,12 +1071,6 @@ void puDecLuma(puStruct pu)
 				u8 type = puDecType();
 				pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 			}
-		}
-		else
-		{
-			u8 dir = puDecDir();
-			u8 type = puDecType();
-			pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 		}
 
 		// Decode the remaining PBs of each row
@@ -1234,6 +1238,7 @@ void rtuDec(rtuStruct rtu)
 		for (u8 x = 0; x < CU_SIZE / 2; x += 8)
 		{
 			rtbDec(&rtu.rtbChroma1[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
+			rtbDec(&rtu.rtbChroma2[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
 		}
 	}
 }
@@ -1243,6 +1248,12 @@ void rtbDec(s16 *rtb, component comp, scanDir dir)
 	// Define the context offsets
 	const u8 stride = (comp == COMPONENT_LUMA) ? CU_SIZE : (CU_SIZE / 2);
 	const u8 ctxBase = (comp == COMPONENT_LUMA) ? CTX_RTB_LUMA_BASE : CTX_RTB_CHROMA_BASE;
+
+	// Clear the RTB
+	for (u8 y = 0; y < 7; y++)
+	{
+		memset(&rtb[stride * y], 0, 7 * sizeof(s16));
+	}
 
 	// Check if the block was coded
 	if (!DecodeDecision(ctxBase + CTX_RTB_CODE_BLOCK_OFFSET))
@@ -1338,7 +1349,8 @@ void rtbDec(s16 *rtb, component comp, scanDir dir)
 			}
 		}
 	}
-	else if (dir == SCAN_VERT)
+	else
+	//else if (dir == SCAN_VERT)
 	{
 		u8 ind = 0;
 		for (u8 x = 0; x < 4; x++)
@@ -1353,28 +1365,37 @@ void rtbDec(s16 *rtb, component comp, scanDir dir)
 			}
 		}
 	}
-	else
-	{
-		//u8 ind = 0;
-		//for (u8 i = 0; i < 7; i++)
-		//{
-		//	u8 x = 0;
-		//	for (s8 y = i; y >= 0; y--)
-		//	{
-		//		rtbOrd[ind] = rtb[stride * y + x];
-		//		x++;
-		//		ind++;
-		//	}
-		//}
-		//for (u8 i = 1; i < 7; i++)
-		//{
-		//	u8 y = 6;
-		//	for (u8 x = i; x < 7; x++)
-		//	{
-		//		rtbOrd[ind] = rtb[stride * y + x];
-		//		y--;
-		//		ind++;
-		//	}
-		//}
-	}
+	//else
+	//{
+	//	u8 ind = 0;
+	//	u8 sigInd = 0;
+	//	for (u8 i = 0; i < 7; i++)
+	//	{
+	//		u8 x = 0;
+	//		for (s8 y = i; y >= 0; y--)
+	//		{
+	//			if (sigMap[sigInd])
+	//			{
+	//				rtb[stride * y + x] = coeffVal[ind];
+	//				ind++;
+	//			}
+	//			sigInd++;
+	//			x++;
+	//		}
+	//	}
+	//	for (u8 i = 1; i < 7; i++)
+	//	{
+	//		u8 y = 6;
+	//		for (u8 x = i; x < 7; x++)
+	//		{
+	//			if (sigMap[sigInd])
+	//			{
+	//				rtb[stride * y + x] = coeffVal[ind];
+	//				ind++;
+	//			}
+	//			sigInd++;
+	//			y--;
+	//		}
+	//	}
+	//}
 }

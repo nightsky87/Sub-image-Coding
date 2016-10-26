@@ -1,5 +1,6 @@
 #include "SiCComBACCore.h"
 
+static u8 *pEnd = NULL;
 static u8 *pByteCur = NULL;
 static u8 *pBitstream = NULL;
 
@@ -259,6 +260,7 @@ void ReadBitstream(char *fName, u16 *width, u16 *height, u8 *channels, paramStru
 	// Allocate a new bitsream
 	pBitstream = (u8 *)malloc(numBytes * sizeof(u8));
 	pByteCur = pBitstream;
+	pEnd = pBitstream + numBytes - 1;
 
 	// Read the complete bitstream to memory
 	fread(pBitstream, sizeof(u8), numBytes, fh);
@@ -357,13 +359,15 @@ u32 ReadBits(u8 numBits)
 		if (bitPos == 0)
 		{
 			bitPos = 8;
-			pByteCur++;
-			byteBuffer = *pByteCur;
-
-			//if (!feof(fh))
-			//	byteBuffer = fgetc(fh);
-			//else
-			//	byteBuffer = 0;
+			if (pByteCur != pEnd)
+			{
+				pByteCur++;
+				byteBuffer = *pByteCur;
+			}
+			else
+			{
+				byteBuffer = 0;
+			}
 		}
 		bitPos--;
 	}

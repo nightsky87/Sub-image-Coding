@@ -10,7 +10,8 @@ using namespace cimg_library;
 int main()
 {
 	// Load a test image
-	CImg<s16> img("../../../../images/Kodak/kodim23.bmp");
+	CImg<s16> img("../../../../images/Misc/lena_std.bmp");
+	CImg<s16> imgRef = img;
 
 	// Determine the original dimensions
 	u32 trueWidth = img.width();
@@ -99,6 +100,9 @@ int main()
 		img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
 	}
 	//img.display();
+
+	printf("%.4f\n", img.PSNR(imgRef, 255));
+	img.display();
 
 	//system("PAUSE");
 	return 0;

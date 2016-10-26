@@ -159,7 +159,7 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 
 	// Find the optimal predictors and apply to the PU
 	predSearch(pu);
-	//puEnc(pu);
+	puEnc(pu);
 
 	// Calculate the residual
 	for (u16 i = 0; i < cbNumPix / 4; i++)
@@ -178,7 +178,7 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	rtuForward(rtu);
 	rtuQuantConst(rtu, param.q2);
 
-	/rtuEnc(rtu);
+	rtuEnc(rtu);
 
 	rtuDequantConst(rtu, param.q2);
 	rtuInverse(rtu);

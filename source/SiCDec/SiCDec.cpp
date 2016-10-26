@@ -2,6 +2,7 @@
 #include "ComDef.h"
 #include "SiCDecCU.h"
 #include "SiCComBACCore.h"
+#include <cmath>
 
 using namespace cimg_library;
 
@@ -65,6 +66,10 @@ int main()
 		img(i + chOffset) = (s16)((g < 0) ? 0 : ((g > 255) ? 255 : g));
 		img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
 	}
+
+	CImg<s16> imgRef("../../../../images/Misc/lena_std.bmp");
+
+	printf("%.4f\n", img.PSNR(imgRef, 255));
 	img.display();
 
 	return 0;
