@@ -11,6 +11,7 @@ static u8 ctx[NUM_TOTAL_CONTEXT];
 static u8 mps[NUM_TOTAL_CONTEXT];
 static u16 codILow = 0x000;
 static u16 codIRange = 0x1FE;
+static u16 codIOffset = 0x1FE;
 
 u16 rangeTabLPS(u8 pStateIdx, u8 qCodIRangeIdx)
 {
@@ -52,8 +53,8 @@ void InitializeEncoder(u32 numBytes)
 	u16 i;
 
 	// Clear out all contexts and most-probable symbols
-	memset(ctx, 0, NUM_TOTAL_CONTEXT * sizeof(u16));
-	memset(mps, 0, NUM_TOTAL_CONTEXT * sizeof(u16));
+	memset(ctx, 0, NUM_TOTAL_CONTEXT * sizeof(u8));
+	memset(mps, 0, NUM_TOTAL_CONTEXT * sizeof(u8));
 
 	// Initialize the arithmetic encoder
 	codILow = 0x000;
@@ -67,6 +68,10 @@ void InitializeEncoder(u32 numBytes)
 	// Allocate a new bitsream
 	pBitstream = (u8 *)malloc(numBytes);
 	pByteCur = pBitstream;
+
+	// Initialize the byte buffer and bit position
+	byteBuffer = 0;
+	bitPos = 7;
 }
 
 void EncodeDecision(u8 ctxIdx, u8 binVal)
@@ -188,30 +193,6 @@ void WriteBitstream(char *fName, u16 width, u16 height, u8 channels, paramStruct
 	fclose(fh);
 }
 
-//void OpenFileEnc(char* fName, u16 width, u16 height, u8 channels, u8 qp)
-//{
-//	if (fopen_s(&fh, fName, "wb"))
-//		printf("Cannot create output file.\n");
-//
-//	fwrite(&width, sizeof(u16), 1, fh);
-//	fwrite(&height, sizeof(u16), 1, fh);
-//	fwrite(&channels, sizeof(u8), 1, fh);
-//	fwrite(&qp, sizeof(u8), 1, fh);
-//
-//	bitPos = 7;
-//	byteBuffer = 0;
-//
-//	InitializeEncoder();
-//}
-//
-//void CloseFileEnc()
-//{
-//	if (bitPos < 7)
-//		fputc(byteBuffer, fh);
-//
-//	fclose(fh);
-//}
-
 void PutBit(u8 B)
 {
 	byteBuffer |= (B << bitPos);
@@ -239,4 +220,153 @@ void PutBit(u8 B)
 		bitPos--;
 		bitsOutstanding--;
 	}
+}
+
+void InitializeDecoder()
+{
+	// Clear out all contexts and most-probable symbols
+	memset(ctx, 0, NUM_TOTAL_CONTEXT * sizeof(u8));
+	memset(mps, 0, NUM_TOTAL_CONTEXT * sizeof(u8));
+
+	// Initialize the arithmetic decoder
+	codIRange = 0x1FE;
+	codIOffset = ReadBits(10) & 0x1FF;
+}
+
+
+void ReadBitstream(char *fName, u16 *width, u16 *height, u8 *channels, paramStruct *param)
+{
+	FILE *fh;
+	if (fopen_s(&fh, fName, "rb"))
+		printf("Cannot read input file.\n");
+
+	// Determine the size of the bitstream
+	fseek(fh, 0, SEEK_END);
+	u32 numBytes = ftell(fh);
+	rewind(fh);
+
+	fread(width, sizeof(u16), 1, fh);
+	fread(height, sizeof(u16), 1, fh);
+	fread(channels, sizeof(u8), 1, fh);
+	fread(param, sizeof(paramStruct), 1, fh);
+
+	numBytes -= (2 * sizeof(u16) + sizeof(u8) + sizeof(paramStruct));
+
+	// Check if the bitstream has previously been allocated
+	if (pBitstream != NULL)
+		free(pBitstream);
+
+	// Allocate a new bitsream
+	pBitstream = (u8 *)malloc(numBytes * sizeof(u8));
+	pByteCur = pBitstream;
+
+	// Read the complete bitstream to memory
+	fread(pBitstream, sizeof(u8), numBytes, fh);
+	fclose(fh);
+
+	// Initialize the byte buffer and bit position
+	bitPos = 7;
+	byteBuffer = *pBitstream;
+}
+
+u8 DecodeDecision(u8 ctxIdx)
+{
+	u8 binVal, pStateIdx, valMPS, qCodIRangeIdx, codIRangeLPS;
+
+	pStateIdx = ctx[ctxIdx];
+	valMPS = mps[ctxIdx];
+	qCodIRangeIdx = (codIRange >> 6) & 3;
+	codIRangeLPS = rangeTabLPS(pStateIdx, qCodIRangeIdx);
+	codIRange -= codIRangeLPS;
+
+	if (codIOffset >= codIRange)
+	{
+		binVal = 1 - valMPS;
+		codIOffset -= codIRange;
+		codIRange = codIRangeLPS;
+
+		if (pStateIdx == 0)
+			mps[ctxIdx] = 1 - valMPS;
+
+		ctx[ctxIdx] = transIdxLPS(pStateIdx);
+	}
+	else
+	{
+		binVal = valMPS;
+
+		if (pStateIdx < 62)
+			ctx[ctxIdx]++;
+	}
+
+	while (codIRange < 0x100)
+	{
+		codIRange <<= 1;
+		codIOffset <<= 1;
+		codIOffset |= ReadBits(1);
+	}
+
+	return binVal;
+}
+
+u8 DecodeBypass()
+{
+	codIOffset <<= 1;
+	codIOffset |= ReadBits(1);
+
+	if (codIOffset >= codIRange)
+	{
+		codIOffset -= codIRange;
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+u8 DecodeTerminate()
+{
+	codIRange -= 2;
+
+	if (codIOffset >= codIRange)
+	{
+		return 1;
+	}
+	else
+	{
+		while (codIRange < 0x100)
+		{
+			codIRange <<= 1;
+			codIOffset <<= 1;
+			codIOffset |= ReadBits(1);
+		}
+		return 0;
+	}
+}
+
+u32 ReadBits(u8 numBits)
+{
+	s8 i;
+	u32 outVar;
+
+	outVar = 0;
+	for (i = numBits - 1; i >= 0; i--)
+	{
+		outVar |= ((byteBuffer >> bitPos) & 1) << i;
+
+		if (bitPos == 0)
+		{
+			bitPos = 8;
+			pByteCur++;
+			byteBuffer = *pByteCur;
+
+			//if (!feof(fh))
+			//	byteBuffer = fgetc(fh);
+			//else
+			//	byteBuffer = 0;
+		}
+		bitPos--;
+	}
+
+	return outVar;
 }

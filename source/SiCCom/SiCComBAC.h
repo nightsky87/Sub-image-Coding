@@ -21,4 +21,19 @@ void puEncType(u8 mode);
 void rtuEnc(rtuStruct rtu);
 void rtbEnc(s16 *rtb, component comp, scanDir dir);
 
+void stuDec(stuStruct stu);
+
+void vstbDec(scuStruct *scu);
+void hstbDec(scuStruct *scu);
+void stbDec(s16 *stb, component comp, scanDir dir);
+
+void puDec(puStruct pu);
+void puDecLuma(puStruct pu);
+void puDecChroma(puStruct pu);
+u8 puDecDir();
+u8 puDecType();
+
+void rtuDec(rtuStruct rtu);
+void rtbDec(s16 *rtb, component comp, scanDir dir);
+
 #endif

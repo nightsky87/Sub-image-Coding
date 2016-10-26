@@ -1,6 +1,6 @@
-#include "SiCEncCU.h"
+#include "SiCDecCU.h"
 
-void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
+void SiCDecCU(cuStruct cu, u32 stride, paramStruct param)
 {
 	// Create a buffer for the coding blocks (CB) and the sub-image coding blocks (SCB)
 	const u16 cbNumPix = CU_SIZE * CU_SIZE;
@@ -18,66 +18,20 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	static scuStruct vscu = { vscbLuma, vscbChroma1, vscbChroma2 };
 	static scuStruct hscu = { hscbLuma, hscbChroma1, hscbChroma2 };
 
-	// Copy pixels to the CBs and the vertical SCBs
-	for (u8 y = 0; y < CU_SIZE / 2; y++)
-	{
-		memcpy(&cbLuma[y * CU_SIZE], &cu.cbLuma[y * stride], CU_SIZE * sizeof(s16));
-		memcpy(&cbChroma1[y * CU_SIZE / 2], &cu.cbChroma1[y * stride / 2], CU_SIZE * sizeof(s16) / 2);
-		memcpy(&cbChroma2[y * CU_SIZE / 2], &cu.cbChroma2[y * stride / 2], CU_SIZE * sizeof(s16) / 2);
+	// Fill all components with zeros
+	memset(cbLuma, 0, cbNumPix * sizeof(s16));
+	memset(cbChroma1, 0, cbNumPix / 4 * sizeof(s16));
+	memset(cbChroma2, 0, cbNumPix / 4 * sizeof(s16));
+	memset(vscbLuma, 0, cbNumPix / 8 * sizeof(s16));
+	memset(vscbChroma1, 0, cbNumPix / 32 * sizeof(s16));
+	memset(vscbChroma2, 0, cbNumPix / 32 * sizeof(s16));
+	memset(hscbLuma, 0, cbNumPix / 8 * sizeof(s16));
+	memset(hscbChroma1, 0, cbNumPix / 32 * sizeof(s16));
+	memset(hscbChroma2, 0, cbNumPix / 32 * sizeof(s16));
 
-		if (y % 8 == 7)
-		{
-			memcpy(&vscbLuma[(y >> 3) * CU_SIZE], &cu.cbLuma[y * stride], CU_SIZE * sizeof(s16));
-			memcpy(&vscbChroma1[(y >> 3) * CU_SIZE / 2], &cu.cbChroma1[y * stride / 2], CU_SIZE * sizeof(s16) / 2);
-			memcpy(&vscbChroma2[(y >> 3) * CU_SIZE / 2], &cu.cbChroma2[y * stride / 2], CU_SIZE * sizeof(s16) / 2);
-		}
-	}
-	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
-	{
-		memcpy(&cbLuma[y * CU_SIZE], &cu.cbLuma[y * stride], CU_SIZE * sizeof(s16));
-
-		if (y % 8 == 7)
-		{
-			memcpy(&vscbLuma[(y >> 3) * CU_SIZE], &cu.cbLuma[y * stride], CU_SIZE * sizeof(s16));
-		}
-	}
-
-	// Copy pixels to the horizontal SCBs
-	for (u8 y = 0; y < CU_SIZE / 2; y++)
-	{
-		for (u8 x = 7; x < CU_SIZE / 2; x += 8)
-		{
-			hscbLuma[y * CU_SIZE / 8 + (x >> 3)] = cbLuma[y * CU_SIZE + x];
-			hscbChroma1[y * CU_SIZE / 16 + (x >> 3)] = cbChroma1[y * CU_SIZE / 2 + x];
-			hscbChroma2[y * CU_SIZE / 16 + (x >> 3)] = cbChroma2[y * CU_SIZE / 2 + x];
-		}
-		for (u8 x = CU_SIZE / 2 + 7; x < CU_SIZE; x += 8)
-		{
-			hscbLuma[y * CU_SIZE / 8 + (x >> 3)] = cbLuma[y * CU_SIZE + x];
-		}
-	}
-	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
-	{
-		for (u8 x = 7; x < CU_SIZE; x += 8)
-		{
-			hscbLuma[y * CU_SIZE / 8 + (x >> 3)] = cbLuma[y * CU_SIZE + x];
-		}
-	}
-
-	// Copy the reference pixels
-	memcpy(cbResLuma, cbLuma, cbNumPix * sizeof(s16));
-	memcpy(cbResChroma1, cbChroma1, cbNumPix / 4 * sizeof(s16));
-	memcpy(cbResChroma2, cbChroma2, cbNumPix / 4 * sizeof(s16));
-
-	// Define the sub-image transform unit (STU)
+	// Decode the sub-image transform units (STUs)
 	static stuStruct stu = { &vscu, &hscu };
-
-	// Apply the forward DCT to the STU
-	stuForward(stu);
-
-	// Quantize the STU
-	stuQuantConst(stu, param.q1);
-	stuEnc(stu);
+	stuDec(stu);
 	stuDequantConst(stu, param.q1);
 
 	// Apply the inverse DCT to the sub-images
@@ -157,68 +111,52 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	static scanDir scanChroma[cbNumPix >> 8];
 	static puStruct pu = { &thisCU, pbModeLuma, pbModeChroma, scanLuma, scanChroma };
 
-	// Find the optimal predictors and apply to the PU
-	predSearch(pu);
-	//puEnc(pu);
+	// Decode the prediction modes and apply prediction
+	//puDec(pu);
+	//predPU(pu);
 
-	// Calculate the residual
-	for (u16 i = 0; i < cbNumPix / 4; i++)
-	{
-		cbResLuma[i] -= cbLuma[i];
-		cbResChroma1[i] -= cbChroma1[i];
-		cbResChroma2[i] -= cbChroma2[i];
-	}
-	for (u16 i = cbNumPix / 4; i < cbNumPix; i++)
-	{
-		cbResLuma[i] -= cbLuma[i];
-	}
-
-	// Transform the residual
+	// Decode and transform the residual
 	static rtuStruct rtu = { cbResLuma, cbResChroma1, cbResChroma2, scanLuma, scanChroma };
-	rtuForward(rtu);
-	rtuQuantConst(rtu, param.q2);
+	rtuDec(rtu);
+	//rtuDequantConst(rtu, param.q2);
+	//rtuInverse(rtu);
 
-	/rtuEnc(rtu);
+	//// Reconstruct the CU
+	//for (u16 y = 0; y < CU_SIZE / 2; y++)
+	//{
+	//	if (y % 8 == 7)
+	//		continue;
 
-	rtuDequantConst(rtu, param.q2);
-	rtuInverse(rtu);
+	//	for (u16 x = 0; x < CU_SIZE / 2; x++)
+	//	{
+	//		if (x % 8 == 7)
+	//			continue;
 
-	// Reconstruct the CU
-	for (u16 y = 0; y < CU_SIZE / 2; y++)
-	{
-		if (y % 8 == 7)
-			continue;
+	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
+	//		cbChroma1[CU_SIZE / 2 * y + x] += cbResChroma1[CU_SIZE / 2 * y + x];
+	//		cbChroma2[CU_SIZE / 2 * y + x] += cbResChroma2[CU_SIZE / 2 * y + x];
+	//	}
+	//	for (u16 x = CU_SIZE / 2; x < CU_SIZE; x++)
+	//	{
+	//		if (x % 8 == 7)
+	//			continue;
 
-		for (u16 x = 0; x < CU_SIZE / 2; x++)
-		{
-			if (x % 8 == 7)
-				continue;
+	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
+	//	}
+	//}
+	//for (u16 y = CU_SIZE / 2; y < CU_SIZE; y++)
+	//{
+	//	if (y % 8 == 7)
+	//		continue;
 
-			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-			cbChroma1[CU_SIZE / 2 * y + x] += cbResChroma1[CU_SIZE / 2 * y + x];
-			cbChroma2[CU_SIZE / 2 * y + x] += cbResChroma2[CU_SIZE / 2 * y + x];
-		}
-		for (u16 x = CU_SIZE / 2; x < CU_SIZE; x++)
-		{
-			if (x % 8 == 7)
-				continue;
+	//	for (u16 x = 0; x < CU_SIZE; x++)
+	//	{
+	//		if (x % 8 == 7)
+	//			continue;
 
-			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-		}
-	}
-	for (u16 y = CU_SIZE / 2; y < CU_SIZE; y++)
-	{
-		if (y % 8 == 7)
-			continue;
-
-		for (u16 x = 0; x < CU_SIZE; x++)
-		{
-			if (x % 8 == 7)
-				continue;
-
-			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-		}
-	}
+	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
+	//	}
+	//}
 
 	// Copy pixels to the image
 	for (u8 y = 0; y < CU_SIZE / 2; y++)

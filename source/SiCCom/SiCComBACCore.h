@@ -17,4 +17,11 @@ void EncodeTerminate();
 void PutBit(u8 B);
 void WriteBitstream(char *fName, u16 width, u16 height, u8 channels, paramStruct param);
 
+void InitializeDecoder();
+void ReadBitstream(char *fName, u16 *width, u16 *height, u8 *channels, paramStruct *param);
+u8 DecodeDecision(u8 ctxIdx);
+u8 DecodeBypass();
+u8 DecodeTerminate();
+u32 ReadBits(u8 numBits);
+
 #endif

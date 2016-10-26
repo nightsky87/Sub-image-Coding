@@ -82,7 +82,7 @@ int main()
 
 	// Terminate the encoding process and write to file
 	EncodeTerminate();
-	WriteBitstream("test.sic", trueWidth, trueHeight, 3, param);
+	WriteBitstream("../../SiCDec/SiCDec/test.sic", trueWidth, trueHeight, channels, param);
 
 	Cb.resize_doubleXY();
 	Cr.resize_doubleXY();

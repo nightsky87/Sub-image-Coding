@@ -1,5 +1,221 @@
 #include "SiCComPred.h"
 
+void predPU(puStruct pu)
+{
+	// Perform predictions on the luma component
+	predLuma(pu);
+
+	// Perform predictions on the chroma components
+	predChroma(pu);
+}
+
+void predLuma(puStruct pu)
+{
+	// Allocate space for the prediction block
+	static s16 pb[81];
+
+	// Process the top-left prediction block
+	for (u8 i = 1; i <= 8; i++)
+	{
+		memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[CU_SIZE * (i - 1)], 8 * sizeof(s16));
+	}
+	pb[8] = pb[17];
+	pb[72] = pb[73];
+	pb[0] = (pb[17] + pb[73] + 1) / 2;
+	for (u8 i = 1; i < 8; i++)
+	{
+		pb[i] = ((8 - i) * pb[0] + i * pb[8] + 4) / 8;
+		pb[9 * i] = ((8 - i) * pb[0] + i * pb[72] + 4) / 8;
+	}
+	predBlock(pb, pu.modeLuma[0]);
+	for (u8 i = 1; i < 8; i++)
+	{
+		memcpy(&pu.cu->cbLuma[CU_SIZE * (i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
+	}
+
+	// Process the top row of prediction blocks
+	for (u8 x = 8; x < CU_SIZE; x += 8)
+	{
+		for (u8 i = 1; i <= 8; i++)
+		{
+			memcpy(&pb[9 * i], &pu.cu->cbLuma[CU_SIZE * (i - 1) + x - 1], 9 * sizeof(s16));
+		}
+		pb[0] = pb[9];
+		pb[8] = pb[17];
+		for (u8 i = 1; i < 8; i++)
+		{
+			pb[i] = ((8 - i) * pb[0] + i * pb[8] + 4) / 8;
+		}
+		predBlock(pb, pu.modeLuma[x / 8]);
+		for (u8 i = 1; i < 8; i++)
+		{
+			memcpy(&pu.cu->cbLuma[CU_SIZE * (i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
+		}
+	}
+
+	// Process the remaining rows of prediction blocks
+	for (u8 y = 8; y < CU_SIZE; y += 8)
+	{
+		// Process the left-most prediction block of the current row
+		for (u8 i = 0; i <= 8; i++)
+		{
+			memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[CU_SIZE * (y + i - 1)], 8 * sizeof(s16));
+		}
+		pb[0] = pb[1];
+		pb[72] = pb[73];
+		for (u8 i = 1; i < 8; i++)
+		{
+			pb[9 * i] = ((8 - i) * pb[0] + i * pb[72] + 4) / 8;
+		}
+		predBlock(pb, pu.modeLuma[CU_SIZE / 8 * (y / 8)]);
+		for (u8 i = 1; i < 8; i++)
+		{
+			memcpy(&pu.cu->cbLuma[CU_SIZE * (y + i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
+		}
+
+		// Process the remaining blocks of the current row
+		for (u8 x = 8; x < CU_SIZE; x += 8)
+		{
+			for (u8 i = 0; i <= 8; i++)
+			{
+				memcpy(&pb[9 * i], &pu.cu->cbLuma[CU_SIZE * (y + i - 1) + x - 1], 9 * sizeof(s16));
+			}
+			predBlock(pb, pu.modeLuma[CU_SIZE / 8 * (y / 8) + x / 8]);
+			for (u8 i = 1; i < 8; i++)
+			{
+				memcpy(&pu.cu->cbLuma[CU_SIZE * (y + i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
+			}
+		}
+	}
+
+	// Assign the scan directions
+	for (u16 i = 0; i < CU_SIZE * CU_SIZE / 64; i++)
+	{
+		// Assign the scan direction
+		if (pu.modeLuma[i] == 0)
+		{
+			pu.scanLuma[i] = SCAN_DIAG;
+		}
+		else
+		{
+			u8 dir = (pu.modeLuma[i] <= 16) ? (pu.modeLuma[i] - 1) : (pu.modeLuma[i] <= 24 ? (pu.modeLuma[i] - 17) : (pu.modeLuma[i] - 25));
+			dir = (dir + 1) % 8;
+
+			if (dir < 3)
+			{
+				pu.scanLuma[i] = SCAN_HORZ;
+			}
+			else if (dir == 3 || dir == 7)
+			{
+				pu.scanLuma[i] = SCAN_DIAG;
+			}
+			else
+			{
+				pu.scanLuma[i] = SCAN_VERT;
+			}
+		}
+	}
+}
+
+void predChroma(puStruct pu)
+{
+	// Allocate space for the prediction block
+	static s16 pb1[81], pb2[81];
+
+	// Process the top-left prediction block
+	for (u8 i = 1; i <= 8; i++)
+	{
+		memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[CU_SIZE / 2 * (i - 1)], 8 * sizeof(s16));
+		memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[CU_SIZE / 2 * (i - 1)], 8 * sizeof(s16));
+	}
+	pb1[8] = pb1[17];
+	pb2[8] = pb2[17];
+	pb1[72] = pb1[73];
+	pb2[72] = pb2[73];
+	pb1[0] = (pb1[17] + pb1[73] + 1) / 2;
+	pb2[0] = (pb2[17] + pb2[73] + 1) / 2;
+	for (u8 i = 1; i < 8; i++)
+	{
+		pb1[i] = ((8 - i) * pb1[0] + i * pb1[8] + 4) / 8;
+		pb2[i] = ((8 - i) * pb2[0] + i * pb2[8] + 4) / 8;
+		pb1[9 * i] = ((8 - i) * pb1[0] + i * pb1[72] + 4) / 8;
+		pb2[9 * i] = ((8 - i) * pb2[0] + i * pb2[72] + 4) / 8;
+	}
+	predBlock(pb1, pb2, &pu.modeLuma[0], pu.modeChroma[0], &pu.scanChroma[0]);
+	for (u8 i = 1; i < 8; i++)
+	{
+		memcpy(&pu.cu->cbChroma1[CU_SIZE / 2 * (i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
+		memcpy(&pu.cu->cbChroma2[CU_SIZE / 2 * (i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
+	}
+
+	// Process the top row of prediction blocks
+	for (u8 x = 8; x < CU_SIZE / 2; x += 8)
+	{
+		for (u8 i = 1; i <= 8; i++)
+		{
+			memcpy(&pb1[9 * i], &pu.cu->cbChroma1[CU_SIZE / 2 * (i - 1) + x - 1], 9 * sizeof(s16));
+			memcpy(&pb2[9 * i], &pu.cu->cbChroma2[CU_SIZE / 2 * (i - 1) + x - 1], 9 * sizeof(s16));
+		}
+		pb1[0] = pb1[9];
+		pb2[0] = pb2[9];
+		pb1[8] = pb1[17];
+		pb2[8] = pb2[17];
+		for (u8 i = 1; i < 8; i++)
+		{
+			pb1[i] = ((8 - i) * pb1[0] + i * pb1[8] + 4) / 8;
+			pb2[i] = ((8 - i) * pb2[0] + i * pb2[8] + 4) / 8;
+		}
+		predBlock(pb1, pb2, &pu.modeLuma[x / 4], pu.modeChroma[x / 8], &pu.scanChroma[x / 8]);
+		for (u8 i = 1; i < 8; i++)
+		{
+			memcpy(&pu.cu->cbChroma1[CU_SIZE / 2 * (i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma2[CU_SIZE / 2 * (i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
+		}
+	}
+
+	// Process the remaining rows of prediction blocks
+	for (u8 y = 8; y < CU_SIZE / 2; y += 8)
+	{
+		// Process the left-most prediction block of the current row
+		for (u8 i = 0; i <= 8; i++)
+		{
+			memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[CU_SIZE / 2 * (y + i - 1)], 8 * sizeof(s16));
+			memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[CU_SIZE / 2 * (y + i - 1)], 8 * sizeof(s16));
+		}
+		pb1[0] = pb1[1];
+		pb2[0] = pb2[1];
+		pb1[72] = pb1[73];
+		pb2[72] = pb2[73];
+		for (u8 i = 1; i < 8; i++)
+		{
+			pb1[9 * i] = ((8 - i) * pb1[0] + i * pb1[72] + 4) / 8;
+			pb2[9 * i] = ((8 - i) * pb2[0] + i * pb2[72] + 4) / 8;
+		}
+		predBlock(pb1, pb2, &pu.modeLuma[CU_SIZE / 8 * (y / 4)], pu.modeChroma[CU_SIZE / 16 * (y / 8)], &pu.scanChroma[CU_SIZE / 16 * (y / 8)]);
+		for (u8 i = 1; i < 8; i++)
+		{
+			memcpy(&pu.cu->cbChroma1[CU_SIZE / 2 * (y + i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma2[CU_SIZE / 2 * (y + i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
+		}
+
+		// Process the remaining blocks of the current row
+		for (u8 x = 8; x < CU_SIZE / 2; x += 8)
+		{
+			for (u8 i = 0; i <= 8; i++)
+			{
+				memcpy(&pb1[9 * i], &pu.cu->cbChroma1[CU_SIZE / 2 * (y + i - 1) + x - 1], 9 * sizeof(s16));
+				memcpy(&pb2[9 * i], &pu.cu->cbChroma2[CU_SIZE / 2 * (y + i - 1) + x - 1], 9 * sizeof(s16));
+			}
+			predBlock(pb1, pb2, &pu.modeLuma[CU_SIZE / 8 * (y / 4) + x / 4], pu.modeChroma[CU_SIZE / 16 * (y / 8) + x / 8], &pu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
+			for (u8 i = 1; i < 8; i++)
+			{
+				memcpy(&pu.cu->cbChroma1[CU_SIZE / 2 * (y + i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
+				memcpy(&pu.cu->cbChroma2[CU_SIZE / 2 * (y + i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
+			}
+		}
+	}
+}
+
 void predSearch(puStruct pu)
 {
 	// Perform predictions on the luma component
@@ -356,6 +572,82 @@ void predBlock(s16 *pb, u8 mode)
 		predBPM(pb, mode - 24);
 	}
 }
+
+void predBlock(s16 *pb1, s16 *pb2, u8 *modeLuma, u8 modeChroma, scanDir *scanChroma)
+{
+	// Generate a unique list of modes for searching
+	static u8 modeSearch[4];
+
+	// Copy the corresponding luma modes
+	modeSearch[0] = modeLuma[0];
+	modeSearch[1] = modeLuma[1];
+	modeSearch[2] = modeLuma[CU_SIZE / 8];
+	modeSearch[3] = modeLuma[CU_SIZE / 8 + 1];
+
+	// Remove duplicates from the search list
+	bool hasDC = (modeLuma[0] == 0);
+	bool hasVert = (modeLuma[0] == 21);
+	bool hasHorz = (modeLuma[0] == 17);
+	for (u8 i = 1; i < 4; i++)
+	{
+		bool isDuplicate = false;
+		for (u8 j = 0; j < i; j++)
+		{
+			isDuplicate |= (modeSearch[i] == modeSearch[j]);
+		}
+
+		if (isDuplicate)
+		{
+			if (!hasDC)
+			{
+				modeSearch[i] = 0;
+				hasDC = true;
+			}
+			else if (!hasVert)
+			{
+				modeSearch[i] = 21;
+				hasVert = true;
+			}
+			else if (!hasHorz)
+			{
+				modeSearch[i] = 17;
+				hasHorz = true;
+			}
+			else
+			{
+				modeSearch[i] = 25;
+			}
+		}
+	}
+
+	predBlock(pb1, modeSearch[modeChroma]);
+	predBlock(pb2, modeSearch[modeChroma]);
+
+	// Assign the scan direction
+	if (modeSearch[modeChroma] == 0)
+	{
+		*scanChroma = SCAN_DIAG;
+	}
+	else
+	{
+		u8 dir = (modeSearch[modeChroma] <= 16) ? (modeSearch[modeChroma] - 1) : (modeSearch[modeChroma] <= 24 ? (modeSearch[modeChroma] - 17) : (modeSearch[modeChroma] - 25));
+		dir = (dir + 1) % 8;
+
+		if (dir < 3)
+		{
+			*scanChroma = SCAN_HORZ;
+		}
+		else if (dir == 3 || dir == 7)
+		{
+			*scanChroma = SCAN_DIAG;
+		}
+		else
+		{
+			*scanChroma = SCAN_VERT;
+		}
+	}
+}
+
 
 void predUPM(s16 *pb, u8 dir)
 {
