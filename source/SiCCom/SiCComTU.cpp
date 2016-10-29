@@ -544,6 +544,7 @@ void hstuInverse(scuStruct *scu)
 	}
 }
 
+#ifndef USE_8x8_RTB
 void rtuForward(rtuStruct rtu)
 {
 	static s32 v0, v1, v2, v3, v4, v5, v6;
@@ -959,6 +960,434 @@ void rtuInverse(rtuStruct rtu)
 		}
 	}
 }
+#else
+void rtuForward(rtuStruct rtu)
+{
+	static s32 v0, v1, v2, v3, v4, v5, v6, v7;
+
+	// Perform the horizontal pass of the 8-point even-odd DCT
+	for (u8 y = 0; y < CU_SIZE / 2; y++)
+	{
+		for (u8 x = 0; x < CU_SIZE / 2; x += 8)
+		{
+			// Perform the luma transform
+			v0 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v1 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v2 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 5];
+			v3 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 4];
+			v4 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 3];
+			v5 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 2];
+			v6 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 6] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 1];
+			v7 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 7] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 0];
+			rtu.rtbLuma[y * CU_SIZE + x + 0] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 1] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 2] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 3] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 4] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 5] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 6] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 7] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 2);
+
+			// Perform the first chroma transform
+			v0 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0] + (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7];
+			v1 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1] + (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6];
+			v2 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2] + (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5];
+			v3 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3] + (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4];
+			v4 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4] - (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3];
+			v5 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5] - (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2];
+			v6 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6] - (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1];
+			v7 = (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7] - (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0];
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 2);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 2);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 2);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 2);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 2);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 2);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 2);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 2);
+
+			// Perform the second chroma transform
+			v0 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0] + (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7];
+			v1 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1] + (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6];
+			v2 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2] + (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5];
+			v3 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3] + (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4];
+			v4 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4] - (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3];
+			v5 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5] - (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2];
+			v6 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6] - (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1];
+			v7 = (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7] - (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0];
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 2);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 2);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 2);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 2);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 2);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 2);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 2);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 2);
+		}
+		for (u8 x = CU_SIZE / 2; x < CU_SIZE; x += 8)
+		{
+			// Perform the luma transform
+			v0 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v1 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v2 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 5];
+			v3 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 4];
+			v4 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 3];
+			v5 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 2];
+			v6 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 6] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 1];
+			v7 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 7] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 0];
+			rtu.rtbLuma[y * CU_SIZE + x + 0] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 1] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 2] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 3] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 4] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 5] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 6] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 7] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 2);
+		}
+	}
+	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
+	{
+		for (u8 x = 0; x < CU_SIZE; x += 8)
+		{
+			// Perform the luma transform
+			v0 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v1 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v2 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 5];
+			v3 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + (s32)rtu.rtbLuma[y * CU_SIZE + x + 4];
+			v4 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 3];
+			v5 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 2];
+			v6 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 6] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 1];
+			v7 = (s32)rtu.rtbLuma[y * CU_SIZE + x + 7] - (s32)rtu.rtbLuma[y * CU_SIZE + x + 0];
+			rtu.rtbLuma[y * CU_SIZE + x + 0] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 1] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 2] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 3] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 4] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 5] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 6] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 2);
+			rtu.rtbLuma[y * CU_SIZE + x + 7] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 2);
+		}
+	}
+
+	// Perform the vertical pass of the 7-point even-odd DCT
+	for (u8 y = 0; y < CU_SIZE / 2; y += 8)
+	{
+		for (u8 x = 0; x < CU_SIZE / 2; x++)
+		{
+			// Perform the luma transform
+			v0 = (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v1 = (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v2 = (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x];
+			v3 = (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x];
+			v4 = (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x];
+			v5 = (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x];
+			v6 = (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x];
+			v7 = (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x];
+			rtu.rtbLuma[(y + 0) * CU_SIZE + x] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 9);
+			rtu.rtbLuma[(y + 1) * CU_SIZE + x] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 9);
+			rtu.rtbLuma[(y + 2) * CU_SIZE + x] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 9);
+			rtu.rtbLuma[(y + 3) * CU_SIZE + x] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 9);
+			rtu.rtbLuma[(y + 4) * CU_SIZE + x] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 9);
+			rtu.rtbLuma[(y + 5) * CU_SIZE + x] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 9);
+			rtu.rtbLuma[(y + 6) * CU_SIZE + x] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 9);
+			rtu.rtbLuma[(y + 7) * CU_SIZE + x] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 9);
+
+			// Perform the first chroma transform
+			v0 = (s32)rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x];
+			v1 = (s32)rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x];
+			v2 = (s32)rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x];
+			v3 = (s32)rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x];
+			v4 = (s32)rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x];
+			v5 = (s32)rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x];
+			v6 = (s32)rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x];
+			v7 = (s32)rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x];
+			rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 9);
+			rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 9);
+			rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 9);
+			rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 9);
+			rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 9);
+			rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 9);
+			rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 9);
+			rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 9);
+
+			// Perform the second chroma transform
+			v0 = (s32)rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x];
+			v1 = (s32)rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x];
+			v2 = (s32)rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x];
+			v3 = (s32)rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x] + (s32)rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x];
+			v4 = (s32)rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x];
+			v5 = (s32)rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x];
+			v6 = (s32)rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x];
+			v7 = (s32)rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x] - (s32)rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x];
+			rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 9);
+			rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 9);
+			rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 9);
+			rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 9);
+			rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 9);
+			rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 9);
+			rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 9);
+			rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 9);
+
+		}
+		for (u8 x = CU_SIZE / 2; x < CU_SIZE; x++)
+		{
+			// Perform the luma transform
+			v0 = (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v1 = (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v2 = (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x];
+			v3 = (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x];
+			v4 = (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x];
+			v5 = (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x];
+			v6 = (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x];
+			v7 = (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x];
+			rtu.rtbLuma[(y + 0) * CU_SIZE + x] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 9);
+			rtu.rtbLuma[(y + 1) * CU_SIZE + x] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 9);
+			rtu.rtbLuma[(y + 2) * CU_SIZE + x] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 9);
+			rtu.rtbLuma[(y + 3) * CU_SIZE + x] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 9);
+			rtu.rtbLuma[(y + 4) * CU_SIZE + x] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 9);
+			rtu.rtbLuma[(y + 5) * CU_SIZE + x] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 9);
+			rtu.rtbLuma[(y + 6) * CU_SIZE + x] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 9);
+			rtu.rtbLuma[(y + 7) * CU_SIZE + x] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 9);
+		}
+	}
+	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y += 8)
+	{
+		for (u8 x = 0; x < CU_SIZE; x++)
+		{
+			// Perform the luma transform
+			v0 = (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v1 = (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v2 = (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x];
+			v3 = (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x];
+			v4 = (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x];
+			v5 = (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x];
+			v6 = (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x];
+			v7 = (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x] - (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x];
+			rtu.rtbLuma[(y + 0) * CU_SIZE + x] = coeffCast((64 * (v0 + v1 + v2 + v3)) >> 9);
+			rtu.rtbLuma[(y + 1) * CU_SIZE + x] = coeffCast((-18 * v4 - 50 * v5 - 75 * v6 - 89 * v7) >> 9);
+			rtu.rtbLuma[(y + 2) * CU_SIZE + x] = coeffCast((83 * (v0 - v3) + 36 * (v1 - v2)) >> 9);
+			rtu.rtbLuma[(y + 3) * CU_SIZE + x] = coeffCast((50 * v4 + 89 * v5 + 18 * v6 - 75 * v7) >> 9);
+			rtu.rtbLuma[(y + 4) * CU_SIZE + x] = coeffCast((64 * (v0 - v1 - v2 + v3)) >> 9);
+			rtu.rtbLuma[(y + 5) * CU_SIZE + x] = coeffCast((-75 * v4 - 18 * v5 + 89 * v6 - 50 * v7) >> 9);
+			rtu.rtbLuma[(y + 6) * CU_SIZE + x] = coeffCast((36 * (v0 - v3) - 83 * (v1 - v2)) >> 9);
+			rtu.rtbLuma[(y + 7) * CU_SIZE + x] = coeffCast((89 * v4 - 75 * v5 + 50 * v6 - 18 * v7) >> 9);
+		}
+	}
+}
+
+void rtuInverse(rtuStruct rtu)
+{
+	static s32 v0, v1, v2, v3, v4, v5, v6, v7;
+
+	// Perform the horizontal pass of the 7-point even-odd DCT
+	for (u8 y = 0; y < CU_SIZE / 2; y++)
+	{
+		for (u8 x = 0; x < CU_SIZE / 2; x += 8)
+		{
+			// Perform the luma transform
+			v0 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] + 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v1 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] - 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v2 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] - 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] - 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] + 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v3 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] - 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v4 = 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] + 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v5 = 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v6 = 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v7 = 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			rtu.rtbLuma[y * CU_SIZE + x + 0] = coeffCast((v0 + v4) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 1] = coeffCast((v1 + v5) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 2] = coeffCast((v2 + v6) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 3] = coeffCast((v3 + v7) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 4] = coeffCast((v3 - v7) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 5] = coeffCast((v2 - v6) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 6] = coeffCast((v1 - v5) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 7] = coeffCast((v0 - v4) >> 7);
+
+			// Perform the first chroma transform
+			v0 = 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0] + 83 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2] + 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4] + 36 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6];
+			v1 = 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0] + 36 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2] - 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4] - 83 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6];
+			v2 = 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0] - 36 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2] - 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4] + 83 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6];
+			v3 = 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0] - 83 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2] + 64 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4] - 36 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6];
+			v4 = 89 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1] + 75 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3] + 50 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5] + 18 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7];
+			v5 = 75 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1] - 18 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3] - 89 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5] - 50 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7];
+			v6 = 50 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1] - 89 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3] + 18 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5] + 75 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7];
+			v7 = 18 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1] - 50 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3] + 75 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5] - 89 * (s32)rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7];
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 0] = coeffCast((v0 + v4) >> 7);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 1] = coeffCast((v1 + v5) >> 7);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 2] = coeffCast((v2 + v6) >> 7);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 3] = coeffCast((v3 + v7) >> 7);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 4] = coeffCast((v3 - v7) >> 7);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 5] = coeffCast((v2 - v6) >> 7);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 6] = coeffCast((v1 - v5) >> 7);
+			rtu.rtbChroma1[y * CU_SIZE / 2 + x + 7] = coeffCast((v0 - v4) >> 7);
+
+			// Perform the second chroma transform
+			v0 = 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0] + 83 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2] + 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4] + 36 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6];
+			v1 = 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0] + 36 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2] - 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4] - 83 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6];
+			v2 = 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0] - 36 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2] - 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4] + 83 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6];
+			v3 = 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0] - 83 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2] + 64 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4] - 36 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6];
+			v4 = 89 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1] + 75 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3] + 50 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5] + 18 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7];
+			v5 = 75 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1] - 18 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3] - 89 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5] - 50 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7];
+			v6 = 50 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1] - 89 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3] + 18 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5] + 75 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7];
+			v7 = 18 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1] - 50 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3] + 75 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5] - 89 * (s32)rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7];
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 0] = coeffCast((v0 + v4) >> 7);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 1] = coeffCast((v1 + v5) >> 7);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 2] = coeffCast((v2 + v6) >> 7);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 3] = coeffCast((v3 + v7) >> 7);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 4] = coeffCast((v3 - v7) >> 7);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 5] = coeffCast((v2 - v6) >> 7);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 6] = coeffCast((v1 - v5) >> 7);
+			rtu.rtbChroma2[y * CU_SIZE / 2 + x + 7] = coeffCast((v0 - v4) >> 7);
+		}
+		for (u8 x = CU_SIZE / 2; x < CU_SIZE; x += 8)
+		{
+			// Perform the luma transform
+			v0 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] + 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v1 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] - 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v2 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] - 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] - 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] + 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v3 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] - 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v4 = 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] + 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v5 = 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v6 = 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v7 = 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			rtu.rtbLuma[y * CU_SIZE + x + 0] = coeffCast((v0 + v4) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 1] = coeffCast((v1 + v5) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 2] = coeffCast((v2 + v6) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 3] = coeffCast((v3 + v7) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 4] = coeffCast((v3 - v7) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 5] = coeffCast((v2 - v6) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 6] = coeffCast((v1 - v5) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 7] = coeffCast((v0 - v4) >> 7);
+		}
+	}
+	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
+	{
+		for (u8 x = 0; x < CU_SIZE; x += 8)
+		{
+			// Perform the luma transform
+			v0 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] + 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v1 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] + 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] - 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v2 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] - 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] - 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] + 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v3 = 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 0] - 83 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 2] + 64 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 4] - 36 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 6];
+			v4 = 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] + 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v5 = 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v6 = 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			v7 = 18 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 1] - 50 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 3] + 75 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 5] - 89 * (s32)rtu.rtbLuma[y * CU_SIZE + x + 7];
+			rtu.rtbLuma[y * CU_SIZE + x + 0] = coeffCast((v0 + v4) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 1] = coeffCast((v1 + v5) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 2] = coeffCast((v2 + v6) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 3] = coeffCast((v3 + v7) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 4] = coeffCast((v3 - v7) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 5] = coeffCast((v2 - v6) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 6] = coeffCast((v1 - v5) >> 7);
+			rtu.rtbLuma[y * CU_SIZE + x + 7] = coeffCast((v0 - v4) >> 7);
+		}
+	}
+
+	// Perform the vertical pass of the 7-point even-odd DCT
+	for (u8 y = 0; y < CU_SIZE / 2; y += 8)
+	{
+		for (u8 x = 0; x < CU_SIZE / 2; x++)
+		{
+			// Perform the luma transform
+			v0 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + 83 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] + 36 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v1 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + 36 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] - 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - 83 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v2 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] - 36 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] - 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] + 83 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v3 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] - 83 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - 36 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v4 = 89 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 50 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] + 18 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v5 = 75 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 18 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - 50 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v6 = 50 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 18 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v7 = 18 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 50 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			rtu.rtbLuma[(y + 0) * CU_SIZE + x] = coeffCast((v0 + v4) >> 12);
+			rtu.rtbLuma[(y + 1) * CU_SIZE + x] = coeffCast((v1 + v5) >> 12);
+			rtu.rtbLuma[(y + 2) * CU_SIZE + x] = coeffCast((v2 + v6) >> 12);
+			rtu.rtbLuma[(y + 3) * CU_SIZE + x] = coeffCast((v3 + v7) >> 12);
+			rtu.rtbLuma[(y + 4) * CU_SIZE + x] = coeffCast((v3 - v7) >> 12);
+			rtu.rtbLuma[(y + 5) * CU_SIZE + x] = coeffCast((v2 - v6) >> 12);
+			rtu.rtbLuma[(y + 6) * CU_SIZE + x] = coeffCast((v1 - v5) >> 12);
+			rtu.rtbLuma[(y + 7) * CU_SIZE + x] = coeffCast((v0 - v4) >> 12);
+
+			// Perform the first chroma transform
+			v0 = 64 * (s32)rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x] + 83 * (s32)rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x] + 64 * (s32)rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x] + 36 * (s32)rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x];
+			v1 = 64 * (s32)rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x] + 36 * (s32)rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x] - 64 * (s32)rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x] - 83 * (s32)rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x];
+			v2 = 64 * (s32)rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x] - 36 * (s32)rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x] - 64 * (s32)rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x] + 83 * (s32)rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x];
+			v3 = 64 * (s32)rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x] - 83 * (s32)rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x] + 64 * (s32)rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x] - 36 * (s32)rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x];
+			v4 = 89 * (s32)rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x] + 75 * (s32)rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x] + 50 * (s32)rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x] + 18 * (s32)rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x];
+			v5 = 75 * (s32)rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x] - 18 * (s32)rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x] - 89 * (s32)rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x] - 50 * (s32)rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x];
+			v6 = 50 * (s32)rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x] - 89 * (s32)rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x] + 18 * (s32)rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x] + 75 * (s32)rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x];
+			v7 = 18 * (s32)rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x] - 50 * (s32)rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x] + 75 * (s32)rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x] - 89 * (s32)rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x];
+			rtu.rtbChroma1[(y + 0) * CU_SIZE / 2 + x] = coeffCast((v0 + v4) >> 12);
+			rtu.rtbChroma1[(y + 1) * CU_SIZE / 2 + x] = coeffCast((v1 + v5) >> 12);
+			rtu.rtbChroma1[(y + 2) * CU_SIZE / 2 + x] = coeffCast((v2 + v6) >> 12);
+			rtu.rtbChroma1[(y + 3) * CU_SIZE / 2 + x] = coeffCast((v3 + v7) >> 12);
+			rtu.rtbChroma1[(y + 4) * CU_SIZE / 2 + x] = coeffCast((v3 - v7) >> 12);
+			rtu.rtbChroma1[(y + 5) * CU_SIZE / 2 + x] = coeffCast((v2 - v6) >> 12);
+			rtu.rtbChroma1[(y + 6) * CU_SIZE / 2 + x] = coeffCast((v1 - v5) >> 12);
+			rtu.rtbChroma1[(y + 7) * CU_SIZE / 2 + x] = coeffCast((v0 - v4) >> 12);
+
+			// Perform the second chroma transform
+			v0 = 64 * (s32)rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x] + 83 * (s32)rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x] + 64 * (s32)rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x] + 36 * (s32)rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x];
+			v1 = 64 * (s32)rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x] + 36 * (s32)rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x] - 64 * (s32)rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x] - 83 * (s32)rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x];
+			v2 = 64 * (s32)rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x] - 36 * (s32)rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x] - 64 * (s32)rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x] + 83 * (s32)rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x];
+			v3 = 64 * (s32)rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x] - 83 * (s32)rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x] + 64 * (s32)rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x] - 36 * (s32)rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x];
+			v4 = 89 * (s32)rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x] + 75 * (s32)rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x] + 50 * (s32)rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x] + 18 * (s32)rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x];
+			v5 = 75 * (s32)rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x] - 18 * (s32)rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x] - 89 * (s32)rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x] - 50 * (s32)rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x];
+			v6 = 50 * (s32)rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x] - 89 * (s32)rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x] + 18 * (s32)rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x] + 75 * (s32)rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x];
+			v7 = 18 * (s32)rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x] - 50 * (s32)rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x] + 75 * (s32)rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x] - 89 * (s32)rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x];
+			rtu.rtbChroma2[(y + 0) * CU_SIZE / 2 + x] = coeffCast((v0 + v4) >> 12);
+			rtu.rtbChroma2[(y + 1) * CU_SIZE / 2 + x] = coeffCast((v1 + v5) >> 12);
+			rtu.rtbChroma2[(y + 2) * CU_SIZE / 2 + x] = coeffCast((v2 + v6) >> 12);
+			rtu.rtbChroma2[(y + 3) * CU_SIZE / 2 + x] = coeffCast((v3 + v7) >> 12);
+			rtu.rtbChroma2[(y + 4) * CU_SIZE / 2 + x] = coeffCast((v3 - v7) >> 12);
+			rtu.rtbChroma2[(y + 5) * CU_SIZE / 2 + x] = coeffCast((v2 - v6) >> 12);
+			rtu.rtbChroma2[(y + 6) * CU_SIZE / 2 + x] = coeffCast((v1 - v5) >> 12);
+			rtu.rtbChroma2[(y + 7) * CU_SIZE / 2 + x] = coeffCast((v0 - v4) >> 12);
+		}
+		for (u8 x = CU_SIZE / 2; x < CU_SIZE; x++)
+		{
+			// Perform the luma transform
+			v0 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + 83 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] + 36 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v1 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + 36 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] - 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - 83 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v2 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] - 36 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] - 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] + 83 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v3 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] - 83 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - 36 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v4 = 89 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 50 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] + 18 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v5 = 75 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 18 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - 50 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v6 = 50 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 18 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v7 = 18 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 50 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			rtu.rtbLuma[(y + 0) * CU_SIZE + x] = coeffCast((v0 + v4) >> 12);
+			rtu.rtbLuma[(y + 1) * CU_SIZE + x] = coeffCast((v1 + v5) >> 12);
+			rtu.rtbLuma[(y + 2) * CU_SIZE + x] = coeffCast((v2 + v6) >> 12);
+			rtu.rtbLuma[(y + 3) * CU_SIZE + x] = coeffCast((v3 + v7) >> 12);
+			rtu.rtbLuma[(y + 4) * CU_SIZE + x] = coeffCast((v3 - v7) >> 12);
+			rtu.rtbLuma[(y + 5) * CU_SIZE + x] = coeffCast((v2 - v6) >> 12);
+			rtu.rtbLuma[(y + 6) * CU_SIZE + x] = coeffCast((v1 - v5) >> 12);
+			rtu.rtbLuma[(y + 7) * CU_SIZE + x] = coeffCast((v0 - v4) >> 12);
+		}
+	}
+	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y += 8)
+	{
+		for (u8 x = 0; x < CU_SIZE; x++)
+		{
+			// Perform the luma transform
+			v0 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + 83 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] + 36 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v1 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] + 36 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] - 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - 83 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v2 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] - 36 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] - 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] + 83 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v3 = 64 * (s32)rtu.rtbLuma[(y + 0) * CU_SIZE + x] - 83 * (s32)rtu.rtbLuma[(y + 2) * CU_SIZE + x] + 64 * (s32)rtu.rtbLuma[(y + 4) * CU_SIZE + x] - 36 * (s32)rtu.rtbLuma[(y + 6) * CU_SIZE + x];
+			v4 = 89 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 50 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] + 18 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v5 = 75 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 18 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - 50 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v6 = 50 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 18 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			v7 = 18 * (s32)rtu.rtbLuma[(y + 1) * CU_SIZE + x] - 50 * (s32)rtu.rtbLuma[(y + 3) * CU_SIZE + x] + 75 * (s32)rtu.rtbLuma[(y + 5) * CU_SIZE + x] - 89 * (s32)rtu.rtbLuma[(y + 7) * CU_SIZE + x];
+			rtu.rtbLuma[(y + 0) * CU_SIZE + x] = coeffCast((v0 + v4) >> 12);
+			rtu.rtbLuma[(y + 1) * CU_SIZE + x] = coeffCast((v1 + v5) >> 12);
+			rtu.rtbLuma[(y + 2) * CU_SIZE + x] = coeffCast((v2 + v6) >> 12);
+			rtu.rtbLuma[(y + 3) * CU_SIZE + x] = coeffCast((v3 + v7) >> 12);
+			rtu.rtbLuma[(y + 4) * CU_SIZE + x] = coeffCast((v3 - v7) >> 12);
+			rtu.rtbLuma[(y + 5) * CU_SIZE + x] = coeffCast((v2 - v6) >> 12);
+			rtu.rtbLuma[(y + 6) * CU_SIZE + x] = coeffCast((v1 - v5) >> 12);
+			rtu.rtbLuma[(y + 7) * CU_SIZE + x] = coeffCast((v0 - v4) >> 12);
+		}
+	}
+}
+#endif
 
 s16 coeffCast(s32 val)
 {

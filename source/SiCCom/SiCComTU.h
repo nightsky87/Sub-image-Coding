@@ -4,6 +4,8 @@
 #include "ComDef.h"
 #include <stdlib.h>
 
+#define USE_8x8_RTB
+
 void stuForward(stuStruct stu);
 void stuInverse(stuStruct stu);
 

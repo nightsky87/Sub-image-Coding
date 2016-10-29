@@ -27,6 +27,8 @@ typedef struct
 {
 	u16 q1;
 	u16 q2;
+	bool isGray;
+	bool chromaSubsample;
 } paramStruct;
 
 typedef struct

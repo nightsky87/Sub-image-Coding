@@ -117,46 +117,46 @@ void SiCDecCU(cuStruct cu, u32 stride, paramStruct param)
 
 	// Decode and transform the residual
 	static rtuStruct rtu = { cbResLuma, cbResChroma1, cbResChroma2, scanLuma, scanChroma };
-	rtuDec(rtu);
-	rtuDequantConst(rtu, param.q2);
-	rtuInverse(rtu);
+	//rtuDec(rtu);
+	//rtuDequantConst(rtu, param.q2);
+	//rtuInverse(rtu);
 
-	// Reconstruct the CU
-	for (u16 y = 0; y < CU_SIZE / 2; y++)
-	{
-		if (y % 8 == 7)
-			continue;
+	//// Reconstruct the CU
+	//for (u16 y = 0; y < CU_SIZE / 2; y++)
+	//{
+	//	if (y % 8 == 7)
+	//		continue;
 
-		for (u16 x = 0; x < CU_SIZE / 2; x++)
-		{
-			if (x % 8 == 7)
-				continue;
+	//	for (u16 x = 0; x < CU_SIZE / 2; x++)
+	//	{
+	//		if (x % 8 == 7)
+	//			continue;
 
-			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-			cbChroma1[CU_SIZE / 2 * y + x] += cbResChroma1[CU_SIZE / 2 * y + x];
-			cbChroma2[CU_SIZE / 2 * y + x] += cbResChroma2[CU_SIZE / 2 * y + x];
-		}
-		for (u16 x = CU_SIZE / 2; x < CU_SIZE; x++)
-		{
-			if (x % 8 == 7)
-				continue;
+	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
+	//		cbChroma1[CU_SIZE / 2 * y + x] += cbResChroma1[CU_SIZE / 2 * y + x];
+	//		cbChroma2[CU_SIZE / 2 * y + x] += cbResChroma2[CU_SIZE / 2 * y + x];
+	//	}
+	//	for (u16 x = CU_SIZE / 2; x < CU_SIZE; x++)
+	//	{
+	//		if (x % 8 == 7)
+	//			continue;
 
-			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-		}
-	}
-	for (u16 y = CU_SIZE / 2; y < CU_SIZE; y++)
-	{
-		if (y % 8 == 7)
-			continue;
+	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
+	//	}
+	//}
+	//for (u16 y = CU_SIZE / 2; y < CU_SIZE; y++)
+	//{
+	//	if (y % 8 == 7)
+	//		continue;
 
-		for (u16 x = 0; x < CU_SIZE; x++)
-		{
-			if (x % 8 == 7)
-				continue;
+	//	for (u16 x = 0; x < CU_SIZE; x++)
+	//	{
+	//		if (x % 8 == 7)
+	//			continue;
 
-			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-		}
-	}
+	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
+	//	}
+	//}
 
 	// Copy pixels to the image
 	for (u8 y = 0; y < CU_SIZE / 2; y++)

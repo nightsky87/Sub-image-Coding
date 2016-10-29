@@ -178,7 +178,7 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	rtuForward(rtu);
 	rtuQuantConst(rtu, param.q2);
 
-	rtuEnc(rtu);
+	//rtuEnc(rtu);
 
 	rtuDequantConst(rtu, param.q2);
 	rtuInverse(rtu);
@@ -186,36 +186,21 @@ void SiCEncCU(cuStruct cu, u32 stride, paramStruct param)
 	// Reconstruct the CU
 	for (u16 y = 0; y < CU_SIZE / 2; y++)
 	{
-		if (y % 8 == 7)
-			continue;
-
 		for (u16 x = 0; x < CU_SIZE / 2; x++)
 		{
-			if (x % 8 == 7)
-				continue;
-
 			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
 			cbChroma1[CU_SIZE / 2 * y + x] += cbResChroma1[CU_SIZE / 2 * y + x];
 			cbChroma2[CU_SIZE / 2 * y + x] += cbResChroma2[CU_SIZE / 2 * y + x];
 		}
 		for (u16 x = CU_SIZE / 2; x < CU_SIZE; x++)
 		{
-			if (x % 8 == 7)
-				continue;
-
 			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
 		}
 	}
 	for (u16 y = CU_SIZE / 2; y < CU_SIZE; y++)
 	{
-		if (y % 8 == 7)
-			continue;
-
 		for (u16 x = 0; x < CU_SIZE; x++)
 		{
-			if (x % 8 == 7)
-				continue;
-
 			cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
 		}
 	}
