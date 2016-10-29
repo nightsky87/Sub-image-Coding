@@ -4,14 +4,11 @@
 #include "ComDef.h"
 #include <stdlib.h>
 
-void stuForward(stuStruct stu);
-void stuInverse(stuStruct stu);
+void tuForward(stuStruct *stu, ChromaSub chromaSub);
+void tuForward(s16 *stb, u8 width, u8 height);
 
-void vstuForward(scuStruct *scu);
-void vstuInverse(scuStruct *scu);
-
-void hstuForward(scuStruct *scu);
-void hstuInverse(scuStruct *scu);
+void tuInverse(stuStruct *stu, ChromaSub chromaSub);
+void tuInverse(s16 *stb, u8 width, u8 height);
 
 void rtuForward(rtuStruct rtu);
 void rtuInverse(rtuStruct rtu);

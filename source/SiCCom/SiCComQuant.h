@@ -3,10 +3,11 @@
 
 #include "ComDef.h"
 
-void stuQuantConst(stuStruct stu, u16 qp);
-void stuDequantConst(stuStruct stu, u16 qp);
-void rtuQuantConst(rtuStruct rtu, u16 qp);
-void rtuDequantConst(rtuStruct rtu, u16 qp);
+void quantConst(stuStruct *stu, u16 qp);
+void quantConst(rtuStruct rtu, u16 qp);
+
+void dequantConst(stuStruct *stu, u16 qp);
+void dequantConst(rtuStruct rtu, u16 qp);
 
 s16 coeffCast(float val);
 

@@ -375,16 +375,16 @@ void puEncLuma(puStruct pu)
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
 				}
-				//else if (dir == dirSrc)
-				//{
-				//	EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
-				//	EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
-				//	puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
-				//}
+				else if (dir == dirSrc)
+				{
+					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
+					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
+					puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+				}
 				else
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
-					//EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
+					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
 					puEncDir(pu.modeLuma[CU_SIZE / 8 * y]);
 					puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
 				}
@@ -1052,12 +1052,12 @@ void puDecLuma(puStruct pu)
 				{
 					pu.modeLuma[CU_SIZE / 8 * y] = pu.modeLuma[CU_SIZE / 8 * (y - 1)];
 				}
-				//else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
-				//{
-				//	u8 dir = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
-				//	u8 type = puDecType();
-				//	pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
-				//}
+				else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
+				{
+					u8 dir = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
+					u8 type = puDecType();
+					pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+				}
 				else
 				{
 					u8 dir = puDecDir();
