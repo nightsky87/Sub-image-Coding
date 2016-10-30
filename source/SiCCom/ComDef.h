@@ -51,9 +51,14 @@ struct cuStruct
 	s16 *cbChroma1;
 	s16 *cbChroma2;
 
+	u8 width;
+	u8 height;
+	u8 stride;
+	ChromaSub chromaSub;
+
 	cuStruct& operator-(cuStruct &rhs)
 	{
-		for (u16 i = 0; i < CU_SIZE * CU_SIZE; i++)
+		for (u16 i = 0; i < this->width * this->height; i++)
 		{
 			this->cbLuma[i] -= rhs.cbLuma[i];
 			this->cbChroma1[i] -= rhs.cbChroma1[i];
@@ -65,7 +70,7 @@ struct cuStruct
 
 	cuStruct& operator+(cuStruct &rhs)
 	{
-		for (u16 i = 0; i < CU_SIZE * CU_SIZE; i++)
+		for (u16 i = 0; i < this->width * this->height; i++)
 		{
 			this->cbLuma[i] += rhs.cbLuma[i];
 			this->cbChroma1[i] += rhs.cbChroma1[i];
@@ -81,12 +86,22 @@ struct scuStruct
 	s16 *scbLuma;
 	s16 *scbChroma1;
 	s16 *scbChroma2;
+
+	u8 width;
+	u8 height;
+	u8 stride;
+	ChromaSub chromaSub;
 };
 
 struct stuStruct
 {
 	scuStruct *vscu;
 	scuStruct *hscu;
+
+	u8 width;
+	u8 height;
+	u8 stride;
+	ChromaSub chromaSub;
 };
 
 struct puStruct
@@ -96,6 +111,11 @@ struct puStruct
 	u8 *modeChroma;
 	ScanDir *scanLuma;
 	ScanDir *scanChroma;
+
+	u8 width;
+	u8 height;
+	u8 stride;
+	ChromaSub chromaSub;
 };
 
 struct rtuStruct
@@ -105,6 +125,11 @@ struct rtuStruct
 	s16 *rtbChroma2;
 	ScanDir *scanLuma;
 	ScanDir *scanChroma;
+
+	u8 width;
+	u8 height;
+	u8 stride;
+	ChromaSub chromaSub;
 };
 
 #endif

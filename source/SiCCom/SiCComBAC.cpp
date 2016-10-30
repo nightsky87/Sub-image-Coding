@@ -1,183 +1,183 @@
 #include "SiCComBAC.h"
 #include <cstdio>
 
-void stuEnc(stuStruct &stu, ChromaSub chromaSub)
+void stuEnc(stuStruct &stu)
 {
-	hstbEnc(stu.hscu, chromaSub);
-	vstbEnc(stu.vscu, chromaSub);
+	hstbEnc(stu.hscu);
+	vstbEnc(stu.vscu);
 }
 
-void vstbEnc(scuStruct *scu, ChromaSub chromaSub)
-{
-	// Process the top row of luma STBs
-	stbEnc(&scu->scbLuma[0], COMPONENT_LUMA, SCAN_VERT);
-	for (u8 x = 4; x < CU_SIZE; x += 4)
-	{
-		s16 dcVal = scu->scbLuma[x];
-		scu->scbLuma[x] = dcVal - scu->scbLuma[x - 4];
-		stbEnc(&scu->scbLuma[x], COMPONENT_LUMA, SCAN_VERT);
-		scu->scbLuma[x] = dcVal;
-	}
-
-	// Process the remaining rows of luma STBs
-	for (u8 y = 4; y < CU_SIZE / 8; y += 4)
-	{
-		// Process the leftmost luma STB
-		s16 dcVal = scu->scbLuma[CU_SIZE * y];
-		scu->scbLuma[CU_SIZE * y] = dcVal - scu->scbLuma[CU_SIZE * (y - 4)];
-		stbEnc(&scu->scbLuma[CU_SIZE * y], COMPONENT_LUMA, SCAN_VERT);
-		scu->scbLuma[CU_SIZE * y] = dcVal;
-
-		// Process the remaining luma STBs
-		for (u8 x = 4; x < CU_SIZE; x += 4)
-		{
-			s16 dcVal = scu->scbLuma[CU_SIZE * y + x];
-			scu->scbLuma[CU_SIZE * y + x] = dcVal - scu->scbLuma[CU_SIZE * y + x - 4];
-			stbEnc(&scu->scbLuma[CU_SIZE * y + x], COMPONENT_LUMA, SCAN_VERT);
-			scu->scbLuma[CU_SIZE * y + x] = dcVal;
-		}
-	}
-
-	// Bypass chroma coding if grayscale
-	if (chromaSub == CHROMA_400)
-		return;
-
-	// Determine the width and height of the chroma STBs
-	u8 width = (chromaSub == CHROMA_444) ? CU_SIZE : (CU_SIZE / 2);
-	u8 height = (chromaSub == CHROMA_444) ? (CU_SIZE / 8) : (CU_SIZE / 16);
-
-	// Process the top row of chroma STBs
-	stbEnc(&scu->scbChroma1[0], COMPONENT_CHROMA, SCAN_VERT);
-	stbEnc(&scu->scbChroma2[0], COMPONENT_CHROMA, SCAN_VERT);
-	for (u8 x = 4; x < width; x += 4)
-	{
-		s16 dcVal = scu->scbChroma1[x];
-		scu->scbChroma1[x] = dcVal - scu->scbChroma1[x - 4];
-		stbEnc(&scu->scbChroma1[x], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma1[x] = dcVal;
-
-		dcVal = scu->scbChroma2[x];
-		scu->scbChroma2[x] = dcVal - scu->scbChroma2[x - 4];
-		stbEnc(&scu->scbChroma2[x], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma2[x] = dcVal;
-	}
-
-	// Process the remaining rows of the chroma STBs
-	for (u8 y = 4; y < height; y += 4)
-	{
-		// Process the leftmost chroma STB
-		s16 dcVal = scu->scbChroma1[CU_SIZE * y];
-		scu->scbChroma1[CU_SIZE * y] = dcVal - scu->scbChroma1[CU_SIZE * (y - 4)];
-		stbEnc(&scu->scbChroma1[CU_SIZE * y], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma1[CU_SIZE * y] = dcVal;
-
-		dcVal = scu->scbChroma2[CU_SIZE * y];
-		scu->scbChroma2[CU_SIZE * y] = dcVal - scu->scbChroma2[CU_SIZE * (y - 4)];
-		stbEnc(&scu->scbChroma2[CU_SIZE * y], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma2[CU_SIZE * y] = dcVal;
-
-		// Process the remaining chroma STBs
-		for (u8 x = 4; x < width; x += 4)
-		{
-			s16 dcVal = scu->scbChroma1[CU_SIZE * y + x];
-			scu->scbChroma1[CU_SIZE * y + x] = dcVal - scu->scbChroma1[CU_SIZE * y + x - 4];
-			stbEnc(&scu->scbChroma1[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_VERT);
-			scu->scbChroma1[CU_SIZE * y + x] = dcVal;
-
-			dcVal = scu->scbChroma2[CU_SIZE * y + x];
-			scu->scbChroma2[CU_SIZE * y + x] = dcVal - scu->scbChroma2[CU_SIZE * y + x - 4];
-			stbEnc(&scu->scbChroma2[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_VERT);
-			scu->scbChroma2[CU_SIZE * y + x] = dcVal;
-		}
-	}
-}
-
-void hstbEnc(scuStruct *scu, ChromaSub chromaSub)
+void hstbEnc(scuStruct *scu)
 {
 	// Process the left column of luma STBs
-	stbEnc(&scu->scbLuma[0], COMPONENT_LUMA, SCAN_HORZ);
-	for (u8 y = 4; y < CU_SIZE; y += 4)
+	stbEnc(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
+	for (u8 y = 4; y < scu->height; y += 4)
 	{
-		s16 dcVal = scu->scbLuma[CU_SIZE * y];
-		scu->scbLuma[CU_SIZE * y] = dcVal - scu->scbLuma[CU_SIZE * (y - 4)];
-		stbEnc(&scu->scbLuma[CU_SIZE * y], COMPONENT_LUMA, SCAN_HORZ);
-		scu->scbLuma[CU_SIZE * y] = dcVal;
+		s16 dcVal = scu->scbLuma[scu->stride * y];
+		scu->scbLuma[scu->stride * y] = dcVal - scu->scbLuma[scu->stride * (y - 4)];
+		stbEnc(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
+		scu->scbLuma[scu->stride * y] = dcVal;
 	}
 
 	// Process the remaining columns of luma STBs
-	for (u8 x = 4; x < CU_SIZE; x += 4)
+	for (u8 x = 4; x < scu->width; x += 4)
 	{
 		// Process the top luma STB
 		s16 dcVal = scu->scbLuma[x];
 		scu->scbLuma[x] = dcVal - scu->scbLuma[x - 4];
-		stbEnc(&scu->scbLuma[x], COMPONENT_LUMA, SCAN_HORZ);
+		stbEnc(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
 		scu->scbLuma[x] = dcVal;
 
 		// Process the remaining luma STBs
-		for (u8 y = 4; y < CU_SIZE; y += 4)
+		for (u8 y = 4; y < scu->height; y += 4)
 		{
-			s16 dcVal = scu->scbLuma[CU_SIZE * y + x];
-			scu->scbLuma[CU_SIZE * y + x] = dcVal - scu->scbLuma[CU_SIZE * (y - 4) + x];
-			stbEnc(&scu->scbLuma[CU_SIZE * y + x], COMPONENT_LUMA, SCAN_HORZ);
-			scu->scbLuma[CU_SIZE * y + x] = dcVal;
+			s16 dcVal = scu->scbLuma[scu->stride * y + x];
+			scu->scbLuma[scu->stride * y + x] = dcVal - scu->scbLuma[scu->stride * (y - 4) + x];
+			stbEnc(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
+			scu->scbLuma[scu->stride * y + x] = dcVal;
 		}
 	}
 
 	// Bypass chroma coding if grayscale
-	if (chromaSub == CHROMA_400)
+	if (scu->chromaSub == CHROMA_400)
 		return;
 
-	// Determine the width and height of the chroma STBs
-	u8 width = (chromaSub == CHROMA_444) ? (CU_SIZE / 8) : (CU_SIZE / 16);
-	u8 height = (chromaSub == CHROMA_444) ? CU_SIZE : (CU_SIZE / 2);
+	// Determine the size factors for the chroma STBs
+	u8 widthDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
 
 	// Process the left column of chroma STBs
-	stbEnc(&scu->scbChroma1[0], COMPONENT_CHROMA, SCAN_HORZ);
-	stbEnc(&scu->scbChroma2[0], COMPONENT_CHROMA, SCAN_HORZ);
-	for (u8 y = 4; y < height; y += 4)
+	stbEnc(&scu->scbChroma1[0], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+	stbEnc(&scu->scbChroma2[0], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+	for (u8 y = 4; y < scu->height / heightDiv; y += 4)
 	{
-		s16 dcVal = scu->scbChroma1[CU_SIZE * y];
-		scu->scbChroma1[CU_SIZE * y] = dcVal - scu->scbChroma1[CU_SIZE * (y - 4)];
-		stbEnc(&scu->scbChroma1[CU_SIZE * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma1[CU_SIZE * y] = dcVal;
+		s16 dcVal = scu->scbChroma1[scu->stride * y];
+		scu->scbChroma1[scu->stride * y] = dcVal - scu->scbChroma1[scu->stride * (y - 4)];
+		stbEnc(&scu->scbChroma1[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+		scu->scbChroma1[scu->stride * y] = dcVal;
 
-		dcVal = scu->scbChroma2[CU_SIZE * y];
-		scu->scbChroma2[CU_SIZE * y] = dcVal - scu->scbChroma2[CU_SIZE * (y - 4)];
-		stbEnc(&scu->scbChroma2[CU_SIZE * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma2[CU_SIZE * y] = dcVal;
+		dcVal = scu->scbChroma2[scu->stride * y];
+		scu->scbChroma2[scu->stride * y] = dcVal - scu->scbChroma2[scu->stride * (y - 4)];
+		stbEnc(&scu->scbChroma2[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+		scu->scbChroma2[scu->stride * y] = dcVal;
 	}
 
 	// Process the remaining columns of the chroma STBs
-	for (u8 x = 4; x < width; x += 4)
+	for (u8 x = 4; x < scu->width / widthDiv; x += 4)
 	{
 		// Process the top chroma STB
 		s16 dcVal = scu->scbChroma1[x];
 		scu->scbChroma1[x] = dcVal - scu->scbChroma1[x - 4];
-		stbEnc(&scu->scbChroma1[x], COMPONENT_CHROMA, SCAN_HORZ);
+		stbEnc(&scu->scbChroma1[x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
 		scu->scbChroma1[x] = dcVal;
 
 		dcVal = scu->scbChroma2[x];
 		scu->scbChroma2[x] = dcVal - scu->scbChroma2[x - 4];
-		stbEnc(&scu->scbChroma2[x], COMPONENT_CHROMA, SCAN_HORZ);
+		stbEnc(&scu->scbChroma2[x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
 		scu->scbChroma2[x] = dcVal;
 
 		// Process the remaining chroma STBs
-		for (u8 y = 4; y < height; y += 4)
+		for (u8 y = 4; y < scu->height / heightDiv; y += 4)
 		{
-			s16 dcVal = scu->scbChroma1[CU_SIZE * y + x];
-			scu->scbChroma1[CU_SIZE * y + x] = dcVal - scu->scbChroma1[CU_SIZE * (y - 4) + x];
-			stbEnc(&scu->scbChroma1[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma1[CU_SIZE * y + x] = dcVal;
+			s16 dcVal = scu->scbChroma1[scu->stride * y + x];
+			scu->scbChroma1[scu->stride * y + x] = dcVal - scu->scbChroma1[scu->stride * (y - 4) + x];
+			stbEnc(&scu->scbChroma1[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+			scu->scbChroma1[scu->stride * y + x] = dcVal;
 
-			dcVal = scu->scbChroma2[CU_SIZE * y + x];
-			scu->scbChroma2[CU_SIZE * y + x] = dcVal - scu->scbChroma2[CU_SIZE * (y - 4) + x];
-			stbEnc(&scu->scbChroma2[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma2[CU_SIZE * y + x] = dcVal;
+			dcVal = scu->scbChroma2[scu->stride * y + x];
+			scu->scbChroma2[scu->stride * y + x] = dcVal - scu->scbChroma2[scu->stride * (y - 4) + x];
+			stbEnc(&scu->scbChroma2[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+			scu->scbChroma2[scu->stride * y + x] = dcVal;
 		}
 	}
 }
 
-void stbEnc(s16 *stb, Component comp, ScanDir dir)
+void vstbEnc(scuStruct *scu)
+{
+	// Process the top row of luma STBs
+	stbEnc(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_VERT);
+	for (u8 x = 4; x < scu->width; x += 4)
+	{
+		s16 dcVal = scu->scbLuma[x];
+		scu->scbLuma[x] = dcVal - scu->scbLuma[x - 4];
+		stbEnc(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
+		scu->scbLuma[x] = dcVal;
+	}
+
+	// Process the remaining rows of luma STBs
+	for (u8 y = 4; y < scu->height; y += 4)
+	{
+		// Process the leftmost luma STB
+		s16 dcVal = scu->scbLuma[scu->stride * y];
+		scu->scbLuma[scu->stride * y] = dcVal - scu->scbLuma[scu->stride * (y - 4)];
+		stbEnc(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_VERT);
+		scu->scbLuma[scu->stride * y] = dcVal;
+
+		// Process the remaining luma STBs
+		for (u8 x = 4; x < scu->width; x += 4)
+		{
+			s16 dcVal = scu->scbLuma[scu->stride * y + x];
+			scu->scbLuma[scu->stride * y + x] = dcVal - scu->scbLuma[scu->stride * y + x - 4];
+			stbEnc(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
+			scu->scbLuma[scu->stride * y + x] = dcVal;
+		}
+	}
+
+	// Bypass chroma coding if grayscale
+	if (scu->chromaSub == CHROMA_400)
+		return;
+
+	// Determine the size factors for the chroma STBs
+	u8 widthDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
+
+	// Process the top row of chroma STBs
+	stbEnc(&scu->scbChroma1[0], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+	stbEnc(&scu->scbChroma2[0], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+	for (u8 x = 4; x < scu->width / widthDiv; x += 4)
+	{
+		s16 dcVal = scu->scbChroma1[x];
+		scu->scbChroma1[x] = dcVal - scu->scbChroma1[x - 4];
+		stbEnc(&scu->scbChroma1[x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma1[x] = dcVal;
+
+		dcVal = scu->scbChroma2[x];
+		scu->scbChroma2[x] = dcVal - scu->scbChroma2[x - 4];
+		stbEnc(&scu->scbChroma2[x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma2[x] = dcVal;
+	}
+
+	// Process the remaining rows of the chroma STBs
+	for (u8 y = 4; y < scu->height / heightDiv; y += 4)
+	{
+		// Process the leftmost chroma STB
+		s16 dcVal = scu->scbChroma1[scu->stride * y];
+		scu->scbChroma1[scu->stride * y] = dcVal - scu->scbChroma1[scu->stride * (y - 4)];
+		stbEnc(&scu->scbChroma1[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma1[scu->stride * y] = dcVal;
+
+		dcVal = scu->scbChroma2[scu->stride * y];
+		scu->scbChroma2[scu->stride * y] = dcVal - scu->scbChroma2[scu->stride * (y - 4)];
+		stbEnc(&scu->scbChroma2[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma2[scu->stride * y] = dcVal;
+
+		// Process the remaining chroma STBs
+		for (u8 x = 4; x < scu->width / widthDiv; x += 4)
+		{
+			s16 dcVal = scu->scbChroma1[scu->stride * y + x];
+			scu->scbChroma1[scu->stride * y + x] = dcVal - scu->scbChroma1[scu->stride * y + x - 4];
+			stbEnc(&scu->scbChroma1[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+			scu->scbChroma1[scu->stride * y + x] = dcVal;
+
+			dcVal = scu->scbChroma2[scu->stride * y + x];
+			scu->scbChroma2[scu->stride * y + x] = dcVal - scu->scbChroma2[scu->stride * y + x - 4];
+			stbEnc(&scu->scbChroma2[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+			scu->scbChroma2[scu->stride * y + x] = dcVal;
+		}
+	}
+}
+
+void stbEnc(s16 *stb, u8 stride, Component comp, ScanDir dir)
 {
 	// Define the context offsets
 	const u8 dirBase = (dir == SCAN_HORZ) ? CTX_HSTB_BASE : CTX_VSTB_BASE;
@@ -189,7 +189,7 @@ void stbEnc(s16 *stb, Component comp, ScanDir dir)
 	{
 		for (u8 y = 0; y < 4; y++)
 		{
-			memcpy(&stbOrd[4 * y], &stb[CU_SIZE * y], 4 * sizeof(s16));
+			memcpy(&stbOrd[4 * y], &stb[stride * y], 4 * sizeof(s16));
 		}
 	}
 	else
@@ -198,7 +198,7 @@ void stbEnc(s16 *stb, Component comp, ScanDir dir)
 		{
 			for (u8 y = 0; y < 4; y++)
 			{
-				stbOrd[4 * x + y] = stb[CU_SIZE * y + x];
+				stbOrd[4 * x + y] = stb[stride * y + x];
 			}
 		}
 	}
@@ -307,7 +307,9 @@ void stbEnc(s16 *stb, Component comp, ScanDir dir)
 void puEnc(puStruct pu)
 {
 	puEncLuma(pu);
-	puEncChroma(pu);
+
+	if (pu.chromaSub != CHROMA_400)
+		puEncChroma(pu);
 }
 
 void puEncLuma(puStruct pu)
@@ -326,7 +328,7 @@ void puEncLuma(puStruct pu)
 	}
 
 	// Encode the top-row PBs
-	for (u8 x = 1; x < CU_SIZE / 8; x++)
+	for (u8 x = 1; x < pu.width; x++)
 	{
 		if (pu.modeLuma[x] == 0)
 		{
@@ -366,10 +368,10 @@ void puEncLuma(puStruct pu)
 	}
 
 	// Encode the remaining rows of PBs
-	for (u8 y = 1; y < CU_SIZE / 8; y++)
+	for (u8 y = 1; y < pu.height; y++)
 	{
 		// Encode the leftmost PB of each row
-		if (pu.modeLuma[CU_SIZE / 8 * y] == 0)
+		if (pu.modeLuma[pu.stride * y] == 0)
 		{
 			EncodeDecision(CTX_PB_LUMA_MODE_DC, 1);
 		}
@@ -377,12 +379,12 @@ void puEncLuma(puStruct pu)
 		{
 			EncodeDecision(CTX_PB_LUMA_MODE_DC, 0);
 
-			if (pu.modeLuma[CU_SIZE / 8 * (y - 1)] != 0)
+			if (pu.modeLuma[pu.stride * (y - 1)] != 0)
 			{
-				u8 dir = (pu.modeLuma[CU_SIZE / 8 * y] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * y] - 1) : (pu.modeLuma[CU_SIZE / 8 * y] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * y] - 17) : (pu.modeLuma[CU_SIZE / 8 * y] - 25));
-				u8 dirSrc = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
+				u8 dir = (pu.modeLuma[pu.stride * y] <= 16) ? (pu.modeLuma[pu.stride * y] - 1) : (pu.modeLuma[pu.stride * y] <= 24 ? (pu.modeLuma[pu.stride * y] - 17) : (pu.modeLuma[pu.stride * y] - 25));
+				u8 dirSrc = (pu.modeLuma[pu.stride * (y - 1)] <= 16) ? (pu.modeLuma[pu.stride * (y - 1)] - 1) : (pu.modeLuma[pu.stride * (y - 1)] <= 24 ? (pu.modeLuma[pu.stride * (y - 1)] - 17) : (pu.modeLuma[pu.stride * (y - 1)] - 25));
 
-				if (pu.modeLuma[CU_SIZE / 8 * y] == pu.modeLuma[CU_SIZE / 8 * (y - 1)])
+				if (pu.modeLuma[pu.stride * y] == pu.modeLuma[pu.stride * (y - 1)])
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
 				}
@@ -390,48 +392,48 @@ void puEncLuma(puStruct pu)
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+					puEncType(pu.modeLuma[pu.stride * y]);
 				}
 				else
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
-					puEncDir(pu.modeLuma[CU_SIZE / 8 * y]);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+					puEncDir(pu.modeLuma[pu.stride * y]);
+					puEncType(pu.modeLuma[pu.stride * y]);
 				}
 			}
 			else
 			{
-				puEncDir(pu.modeLuma[CU_SIZE / 8 * y]);
-				puEncType(pu.modeLuma[CU_SIZE / 8 * y]);
+				puEncDir(pu.modeLuma[pu.stride * y]);
+				puEncType(pu.modeLuma[pu.stride * y]);
 			}
 		}
 
 		// Encode the remaining PBs of each row
-		for (u8 x = 1; x < CU_SIZE / 8; x++)
+		for (u8 x = 1; x < pu.width; x++)
 		{
-			if (pu.modeLuma[CU_SIZE / 8 * y + x] == 0)
+			if (pu.modeLuma[pu.stride * y + x] == 0)
 			{
 				EncodeDecision(CTX_PB_LUMA_MODE_DC, 1);
 				continue;
 			}
 			EncodeDecision(CTX_PB_LUMA_MODE_DC, 0);
 
-			u8 dir = (pu.modeLuma[CU_SIZE / 8 * y + x] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * y + x] - 1) : (pu.modeLuma[CU_SIZE / 8 * y + x] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * y + x] - 17) : (pu.modeLuma[CU_SIZE / 8 * y + x] - 25));
-			u8 dirSrcLeft = (pu.modeLuma[CU_SIZE / 8 * y + x - 1] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * y + x - 1] - 1) : (pu.modeLuma[CU_SIZE / 8 * y + x - 1] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * y + x - 1] - 17) : (pu.modeLuma[CU_SIZE / 8 * y + x - 1] - 25));
-			u8 dirSrcTop = (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] - 25));
+			u8 dir = (pu.modeLuma[pu.stride * y + x] <= 16) ? (pu.modeLuma[pu.stride * y + x] - 1) : (pu.modeLuma[pu.stride * y + x] <= 24 ? (pu.modeLuma[pu.stride * y + x] - 17) : (pu.modeLuma[pu.stride * y + x] - 25));
+			u8 dirSrcLeft = (pu.modeLuma[pu.stride * y + x - 1] <= 16) ? (pu.modeLuma[pu.stride * y + x - 1] - 1) : (pu.modeLuma[pu.stride * y + x - 1] <= 24 ? (pu.modeLuma[pu.stride * y + x - 1] - 17) : (pu.modeLuma[pu.stride * y + x - 1] - 25));
+			u8 dirSrcTop = (pu.modeLuma[pu.stride * (y - 1) + x] <= 16) ? (pu.modeLuma[pu.stride * (y - 1) + x] - 1) : (pu.modeLuma[pu.stride * (y - 1) + x] <= 24 ? (pu.modeLuma[pu.stride * (y - 1) + x] - 17) : (pu.modeLuma[pu.stride * (y - 1) + x] - 25));
 
-			bool isDCLeft = (pu.modeLuma[CU_SIZE / 8 * y + x - 1] == 0);
-			bool isDCTop = (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] == 0);
+			bool isDCLeft = (pu.modeLuma[pu.stride * y + x - 1] == 0);
+			bool isDCTop = (pu.modeLuma[pu.stride * (y - 1) + x] == 0);
 
 			if (!isDCLeft && !isDCTop)
 			{
-				if (pu.modeLuma[CU_SIZE / 8 * y + x] == pu.modeLuma[CU_SIZE / 8 * y + x - 1])
+				if (pu.modeLuma[pu.stride * y + x] == pu.modeLuma[pu.stride * y + x - 1])
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
 					EncodeDecision(CTX_PB_LUMA_COPY_SOURCE, 0);
 				}
-				else if (pu.modeLuma[CU_SIZE / 8 * y + x] == pu.modeLuma[CU_SIZE / 8 * (y - 1) + x])
+				else if (pu.modeLuma[pu.stride * y + x] == pu.modeLuma[pu.stride * (y - 1) + x])
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
 					EncodeDecision(CTX_PB_LUMA_COPY_SOURCE, 1);
@@ -441,26 +443,26 @@ void puEncLuma(puStruct pu)
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
 					EncodeDecision(CTX_PB_LUMA_COPY_SOURCE, 0);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+					puEncType(pu.modeLuma[pu.stride * y + x]);
 				}
 				else if (dir == dirSrcTop)
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
 					EncodeDecision(CTX_PB_LUMA_COPY_SOURCE, 1);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+					puEncType(pu.modeLuma[pu.stride * y + x]);
 				}
 				else
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
-					puEncDir(pu.modeLuma[CU_SIZE / 8 * y + x]);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+					puEncDir(pu.modeLuma[pu.stride * y + x]);
+					puEncType(pu.modeLuma[pu.stride * y + x]);
 				}
 			}
 			else if (!isDCLeft && isDCTop)
 			{
-				if (pu.modeLuma[CU_SIZE / 8 * y + x] == pu.modeLuma[CU_SIZE / 8 * y + x - 1])
+				if (pu.modeLuma[pu.stride * y + x] == pu.modeLuma[pu.stride * y + x - 1])
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
 				}
@@ -468,19 +470,19 @@ void puEncLuma(puStruct pu)
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+					puEncType(pu.modeLuma[pu.stride * y + x]);
 				}
 				else
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
-					puEncDir(pu.modeLuma[CU_SIZE / 8 * y + x]);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+					puEncDir(pu.modeLuma[pu.stride * y + x]);
+					puEncType(pu.modeLuma[pu.stride * y + x]);
 				}
 			}
 			else if (isDCLeft && !isDCTop)
 			{
-				if (pu.modeLuma[CU_SIZE / 8 * y + x] == pu.modeLuma[CU_SIZE / 8 * (y - 1) + x])
+				if (pu.modeLuma[pu.stride * y + x] == pu.modeLuma[pu.stride * (y - 1) + x])
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 1);
 				}
@@ -488,20 +490,20 @@ void puEncLuma(puStruct pu)
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 1);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+					puEncType(pu.modeLuma[pu.stride * y + x]);
 				}
 				else
 				{
 					EncodeDecision(CTX_PB_LUMA_COPY_MODE, 0);
 					EncodeDecision(CTX_PB_LUMA_COPY_DIR, 0);
-					puEncDir(pu.modeLuma[CU_SIZE / 8 * y + x]);
-					puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+					puEncDir(pu.modeLuma[pu.stride * y + x]);
+					puEncType(pu.modeLuma[pu.stride * y + x]);
 				}
 			}
 			else
 			{
-				puEncDir(pu.modeLuma[CU_SIZE / 8 * y + x]);
-				puEncType(pu.modeLuma[CU_SIZE / 8 * y + x]);
+				puEncDir(pu.modeLuma[pu.stride * y + x]);
+				puEncType(pu.modeLuma[pu.stride * y + x]);
 			}
 		}
 	}
@@ -509,14 +511,18 @@ void puEncLuma(puStruct pu)
 
 void puEncChroma(puStruct pu)
 {
-	// Determine the number of chroma PBs in the CU
-	const u16 numChromaPB = CU_SIZE * CU_SIZE / 256;
+	// Determine the size factors for the chroma PBs
+	u8 widthDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
 
 	// Process each of the chroma modes
-	for (u8 i = 0; i < numChromaPB; i++)
+	for (u8 y = 0; y < pu.height / heightDiv; y++)
 	{
-		EncodeDecision(CTX_PB_CHROMA_SOURCE_MSB, (pu.modeChroma[i] >> 1) & 1);
-		EncodeDecision(CTX_PB_CHROMA_SOURCE_LSB, pu.modeChroma[i] & 1);
+		for (u8 x = 0; x < pu.width / widthDiv; x++)
+		{
+			EncodeDecision(CTX_PB_CHROMA_SOURCE_MSB, (pu.modeChroma[pu.stride * y + x] >> 1) & 1);
+			EncodeDecision(CTX_PB_CHROMA_SOURCE_LSB, pu.modeChroma[pu.stride * y + x] & 1);
+		}
 	}
 }
 
@@ -571,78 +577,84 @@ void puEncType(u8 mode)
 void rtuEnc(rtuStruct rtu)
 {
 	// Process each luma residual transform block (RTB)
-	for (u8 y = 0; y < CU_SIZE; y += 8)
+	for (u8 y = 0; y < rtu.height; y += 8)
 	{
-		for (u8 x = 0; x < CU_SIZE; x += 8)
+		for (u8 x = 0; x < rtu.width; x += 8)
 		{
-			rtbEnc(&rtu.rtbLuma[CU_SIZE * y + x], COMPONENT_LUMA, rtu.scanLuma[CU_SIZE / 8 * (y / 8) + x / 8]);
+			rtbEnc(&rtu.rtbLuma[rtu.stride * y + x], rtu.stride, COMPONENT_LUMA, rtu.scanLuma[rtu.stride / 8 * (y / 8) + x / 8]);
 		}
 	}
 
+	// Bypass chroma coding if grayscale
+	if (rtu.chromaSub == CHROMA_400)
+		return;
+
+	// Determine the size factors for the chroma RTBs
+	u8 widthDiv = (rtu.chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (rtu.chromaSub == CHROMA_444) ? 1 : 2;
+
 	// Process each chroma residual transform block (RTB)
-	for (u8 y = 0; y < CU_SIZE / 2; y += 8)
+	for (u8 y = 0; y < rtu.height / heightDiv; y += 8)
 	{
-		for (u8 x = 0; x < CU_SIZE / 2; x += 8)
+		for (u8 x = 0; x < rtu.width / widthDiv; x += 8)
 		{
-			rtbEnc(&rtu.rtbChroma1[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
-			rtbEnc(&rtu.rtbChroma2[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
+			rtbEnc(&rtu.rtbChroma1[rtu.stride * y + x], rtu.stride, COMPONENT_CHROMA, rtu.scanChroma[rtu.stride / 8 * (y / 8) + x / 8]);
+			rtbEnc(&rtu.rtbChroma2[rtu.stride * y + x], rtu.stride, COMPONENT_CHROMA, rtu.scanChroma[rtu.stride / 8 * (y / 8) + x / 8]);
 		}
 	}
 }
 
-void rtbEnc(s16 *rtb, Component comp, ScanDir dir)
+void rtbEnc(s16 *rtb, u8 stride, Component comp, ScanDir dir)
 {
 	// Define the context offsets
-	const u8 stride = (comp == COMPONENT_LUMA) ? CU_SIZE : (CU_SIZE / 2);
 	const u8 ctxBase = (comp == COMPONENT_LUMA) ? CTX_RTB_LUMA_BASE : CTX_RTB_CHROMA_BASE;
 
 	// Create an ordered copy of the STB
-	static s16 rtbOrd[49];
+	static s16 rtbOrd[RTB_SIZE * RTB_SIZE];
 	if (dir == SCAN_HORZ)
 	{
-		for (u8 y = 0; y < 7; y++)
+		for (u8 y = 0; y < RTB_SIZE; y++)
 		{
-			memcpy(&rtbOrd[7 * y], &rtb[stride * y], 7 * sizeof(s16));
+			memcpy(&rtbOrd[RTB_SIZE * y], &rtb[stride * y], RTB_SIZE * sizeof(s16));
 		}
 	}
-	else
-	//else if (dir == SCAN_VERT)
+	else if (dir == SCAN_VERT)
 	{
-		for (u8 x = 0; x < 7; x++)
+		for (u8 x = 0; x < RTB_SIZE; x++)
 		{
-			for (u8 y = 0; y < 7; y++)
+			for (u8 y = 0; y < RTB_SIZE; y++)
 			{
-				rtbOrd[7 * x + y] = rtb[stride * y + x];
+				rtbOrd[RTB_SIZE * x + y] = rtb[stride * y + x];
 			}
 		}
 	}
-	//else
-	//{
-	//	u8 ind = 0;
-	//	for (u8 i = 0; i < 7; i++)
-	//	{
-	//		u8 x = 0;
-	//		for (s8 y = i; y >= 0; y--)
-	//		{
-	//			rtbOrd[ind] = rtb[stride * y + x];
-	//			x++;
-	//			ind++;
-	//		}
-	//	}
-	//	for (u8 i = 1; i < 7; i++)
-	//	{
-	//		u8 y = 6;
-	//		for (u8 x = i; x < 7; x++)
-	//		{
-	//			rtbOrd[ind] = rtb[stride * y + x];
-	//			y--;
-	//			ind++;
-	//		}
-	//	}
-	//}
+	else
+	{
+		u8 ind = 0;
+		for (u8 i = 0; i < RTB_SIZE; i++)
+		{
+			u8 x = 0;
+			for (s8 y = i; y >= 0; y--)
+			{
+				rtbOrd[ind] = rtb[stride * y + x];
+				x++;
+				ind++;
+			}
+		}
+		for (u8 i = 1; i < RTB_SIZE; i++)
+		{
+			u8 y = RTB_SIZE - 1;
+			for (u8 x = i; x < RTB_SIZE; x++)
+			{
+				rtbOrd[ind] = rtb[stride * y + x];
+				y--;
+				ind++;
+			}
+		}
+	}
 
 	// Determine the index of the last significant coefficient in the STB
-	s8 lastSig = 48;
+	s8 lastSig = RTB_SIZE * RTB_SIZE - 1;
 	while (rtbOrd[lastSig] == 0 && lastSig >= 0)
 		lastSig--;
 
@@ -668,7 +680,7 @@ void rtbEnc(s16 *rtb, Component comp, ScanDir dir)
 
 	// Signal the significance map
 	u8 numSig = 0;
-	s16 coeffVal[49];
+	s16 coeffVal[RTB_SIZE * RTB_SIZE];
 	for (u8 i = 0; i <= lastSig; i++)
 	{
 		if (rtbOrd[i] == 0)
@@ -742,140 +754,151 @@ void rtbEnc(s16 *rtb, Component comp, ScanDir dir)
 	}
 }
 
-void stuDec(stuStruct stu)
+void stuDec(stuStruct &stu)
 {
-	vstbDec(stu.vscu);
 	hstbDec(stu.hscu);
+	vstbDec(stu.vscu);
 }
 
 void vstbDec(scuStruct *scu)
 {
 	// Process the top row of luma STBs
-	stbDec(&scu->scbLuma[0], COMPONENT_LUMA, SCAN_VERT);
-	for (u8 x = 4; x < CU_SIZE; x += 4)
+	stbDec(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_VERT);
+	for (u8 x = 4; x < scu->width; x += 4)
 	{
-		stbDec(&scu->scbLuma[x], COMPONENT_LUMA, SCAN_VERT);
+		stbDec(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
 		scu->scbLuma[x] += scu->scbLuma[x - 4];
 	}
 
 	// Process the remaining rows of luma STBs
-	for (u8 y = 4; y < CU_SIZE / 8; y += 4)
+	for (u8 y = 4; y < scu->height; y += 4)
 	{
 		// Process the leftmost luma STB
-		stbDec(&scu->scbLuma[CU_SIZE * y], COMPONENT_LUMA, SCAN_VERT);
-		scu->scbLuma[CU_SIZE * y] += scu->scbLuma[CU_SIZE * (y - 4)];
+		stbDec(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_VERT);
+		scu->scbLuma[scu->stride * y] += scu->scbLuma[scu->stride * (y - 4)];
 
 		// Process the remaining luma STBs
-		for (u8 x = 4; x < CU_SIZE; x += 4)
+		for (u8 x = 4; x < scu->width; x += 4)
 		{
-			stbDec(&scu->scbLuma[CU_SIZE * y + x], COMPONENT_LUMA, SCAN_VERT);
-			scu->scbLuma[CU_SIZE * y + x] += scu->scbLuma[CU_SIZE * y + x - 4];
+			stbDec(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
+			scu->scbLuma[scu->stride * y + x] += scu->scbLuma[scu->stride * y + x - 4];
 		}
 	}
 
+	// Bypass chroma coding if grayscale
+	if (scu->chromaSub == CHROMA_400)
+		return;
+
+	// Determine the size factors for the chroma STBs
+	u8 widthDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
+
 	// Process the top row of chroma STBs
-	stbDec(&scu->scbChroma1[0], COMPONENT_CHROMA, SCAN_VERT);
-	stbDec(&scu->scbChroma2[0], COMPONENT_CHROMA, SCAN_VERT);
-	for (u8 x = 4; x < CU_SIZE / 2; x += 4)
+	stbDec(&scu->scbChroma1[0], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+	stbDec(&scu->scbChroma2[0], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+	for (u8 x = 4; x < scu->width / widthDiv; x += 4)
 	{
-		stbDec(&scu->scbChroma1[x], COMPONENT_CHROMA, SCAN_VERT);
+		stbDec(&scu->scbChroma1[x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
 		scu->scbChroma1[x] += scu->scbChroma1[x - 4];
 
-		stbDec(&scu->scbChroma2[x], COMPONENT_CHROMA, SCAN_VERT);
+		stbDec(&scu->scbChroma2[x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
 		scu->scbChroma2[x] += scu->scbChroma2[x - 4];
 	}
 
-#if CU_SIZE > 64
 	// Process the remaining rows of the chroma STBs
-	for (u8 y = 4; y < CU_SIZE / 16; y += 4)
+	for (u8 y = 4; y < scu->height / heightDiv; y += 4)
 	{
 		// Process the leftmost chroma STB
-		stbDec(&scu->scbChroma1[CU_SIZE / 2 * y], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma1[CU_SIZE / 2 * y] += scu->scbChroma1[CU_SIZE / 2 * (y - 4)];
+		stbDec(&scu->scbChroma1[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma1[scu->stride * y] += scu->scbChroma1[scu->stride * (y - 4)];
 
-		stbDec(&scu->scbChroma2[CU_SIZE / 2 * y], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma2[CU_SIZE / 2 * y] += scu->scbChroma2[CU_SIZE / 2 * (y - 4)];
+		stbDec(&scu->scbChroma2[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma2[scu->stride * y] += scu->scbChroma2[scu->stride * (y - 4)];
 
 		// Process the remaining chroma STBs
-		for (u8 x = 4; x < CU_SIZE; x += 4)
+		for (u8 x = 4; x < scu->width / widthDiv; x += 4)
 		{
-			stbDec(&scu->scbChroma1[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, SCAN_VERT);
-			scu->scbChroma1[CU_SIZE / 2 * y + x] += scu->scbChroma1[CU_SIZE / 2 * y + x - 4];
+			stbDec(&scu->scbChroma1[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+			scu->scbChroma1[scu->stride * y + x] += scu->scbChroma1[scu->stride * y + x - 4];
 
-			stbDec(&scu->scbChroma2[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, SCAN_VERT);
-			scu->scbChroma2[CU_SIZE / 2 * y + x] += scu->scbChroma2[CU_SIZE / 2 * y + x - 4];
+			stbDec(&scu->scbChroma2[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_VERT);
+			scu->scbChroma2[scu->stride * y + x] += scu->scbChroma2[scu->stride * y + x - 4];
 		}
 	}
-#endif
 }
 
 void hstbDec(scuStruct *scu)
 {
 	// Process the left column of luma STBs
-	stbDec(&scu->scbLuma[0], COMPONENT_LUMA, SCAN_HORZ);
-	for (u8 y = 4; y < CU_SIZE; y += 4)
+	stbDec(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
+	for (u8 y = 4; y < scu->height; y += 4)
 	{
-		stbDec(&scu->scbLuma[CU_SIZE / 8 * y], COMPONENT_LUMA, SCAN_HORZ);
-		scu->scbLuma[CU_SIZE / 8 * y] += scu->scbLuma[CU_SIZE / 8 * (y - 4)];
+		stbDec(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
+		scu->scbLuma[scu->stride * y] += scu->scbLuma[scu->stride * (y - 4)];
 	}
 
 	// Process the remaining columns of luma STBs
-	for (u8 x = 4; x < CU_SIZE / 8; x += 4)
+	for (u8 x = 4; x < scu->width; x += 4)
 	{
 		// Process the top luma STB
-		stbDec(&scu->scbLuma[x], COMPONENT_LUMA, SCAN_HORZ);
+		stbDec(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
 		scu->scbLuma[x] += scu->scbLuma[x - 4];
 
 		// Process the remaining luma STBs
-		for (u8 y = 4; y < CU_SIZE; y += 4)
+		for (u8 y = 4; y < scu->height; y += 4)
 		{
-			stbDec(&scu->scbLuma[CU_SIZE / 8 * y + x], COMPONENT_LUMA, SCAN_HORZ);
-			scu->scbLuma[CU_SIZE / 8 * y + x] += scu->scbLuma[CU_SIZE / 8 * (y - 4) + x];
+			stbDec(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
+			scu->scbLuma[scu->stride * y + x] += scu->scbLuma[scu->stride * (y - 4) + x];
 		}
 	}
 
-	// Process the left column of chroma STBs
-	stbDec(&scu->scbChroma1[0], COMPONENT_CHROMA, SCAN_HORZ);
-	stbDec(&scu->scbChroma2[0], COMPONENT_CHROMA, SCAN_HORZ);
-	for (u8 y = 4; y < CU_SIZE / 2; y += 4)
-	{
-		stbDec(&scu->scbChroma1[CU_SIZE / 16 * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma1[CU_SIZE / 16 * y] += scu->scbChroma1[CU_SIZE / 16 * (y - 4)];
+	// Bypass chroma coding if grayscale
+	if (scu->chromaSub == CHROMA_400)
+		return;
 
-		stbDec(&scu->scbChroma2[CU_SIZE / 16 * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma2[CU_SIZE / 16 * y] += scu->scbChroma2[CU_SIZE / 16 * (y - 4)];
+	// Determine the size factors for the chroma STBs
+	u8 widthDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (scu->chromaSub == CHROMA_444) ? 1 : 2;
+
+	// Process the left column of chroma STBs
+	stbDec(&scu->scbChroma1[0], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+	stbDec(&scu->scbChroma2[0], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+	for (u8 y = 4; y < scu->height / heightDiv; y += 4)
+	{
+		stbDec(&scu->scbChroma1[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+		scu->scbChroma1[scu->stride * y] += scu->scbChroma1[scu->stride * (y - 4)];
+
+		stbDec(&scu->scbChroma2[scu->stride * y], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+		scu->scbChroma2[scu->stride * y] += scu->scbChroma2[scu->stride * (y - 4)];
 	}
 
-#if CU_SIZE > 64
 	// Process the remaining columns of the chroma STBs
-	for (u8 x = 4; x < CU_SIZE / 16; x += 4)
+	for (u8 x = 4; x < scu->width / widthDiv; x += 4)
 	{
 		// Process the top chroma STB
-		stbDec(&scu->scbChroma1[x], COMPONENT_CHROMA, SCAN_HORZ);
+		stbDec(&scu->scbChroma1[x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
 		scu->scbChroma1[x] += scu->scbChroma1[x - 4];
 
-		stbDec(&scu->scbChroma2[x], COMPONENT_CHROMA, SCAN_HORZ);
+		stbDec(&scu->scbChroma2[x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
 		scu->scbChroma2[x] += scu->scbChroma2[x - 4];
 
 		// Process the remaining chroma STBs
-		for (u8 y = 4; y < CU_SIZE; y += 4)
+		for (u8 y = 4; y < scu->height / heightDiv; y += 4)
 		{
-			stbDec(&scu->scbChroma1[CU_SIZE / 16 * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma1[CU_SIZE / 16 * y + x] += scu->scbChroma1[CU_SIZE / 16 * (y - 4) + x];
+			stbDec(&scu->scbChroma1[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+			scu->scbChroma1[scu->stride * y + x] += scu->scbChroma1[scu->stride * (y - 4) + x];
 
-			stbDec(&scu->scbChroma2[CU_SIZE / 16 * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma2[CU_SIZE / 16 * y + x] += scu->scbChroma2[CU_SIZE / 16 * (y - 4) + x];
+			stbDec(&scu->scbChroma2[scu->stride * y + x], scu->stride, COMPONENT_CHROMA, SCAN_HORZ);
+			scu->scbChroma2[scu->stride * y + x] += scu->scbChroma2[scu->stride * (y - 4) + x];
 		}
 	}
-#endif
 }
 
-void stbDec(s16 *stb, Component comp, ScanDir dir)
+void stbDec(s16 *stb, u8 stride, Component comp, ScanDir dir)
 {
 	// Define the context offsets
 	const u8 dirBase = (dir == SCAN_HORZ) ? CTX_HSTB_BASE : CTX_VSTB_BASE;
 	const u8 ctxBase = (comp == COMPONENT_LUMA) ? (dirBase + CTX_STB_LUMA_OFFSET) : (dirBase + CTX_STB_CHROMA_OFFSET);
-	const u8 stride = (dir == SCAN_HORZ) ? ((comp == COMPONENT_LUMA) ? (CU_SIZE / 8) : (CU_SIZE / 16)) : ((comp == COMPONENT_LUMA) ? CU_SIZE : (CU_SIZE / 2));
 
 	// Check if the block was coded
 	if (!DecodeDecision(ctxBase + CTX_STB_CODE_BLOCK_OFFSET))
@@ -988,13 +1011,15 @@ void stbDec(s16 *stb, Component comp, ScanDir dir)
 	}
 }
 
-void puDec(puStruct pu)
+void puDec(puStruct &pu)
 {
 	puDecLuma(pu);
-	puDecChroma(pu);
+
+	if (pu.chromaSub != CHROMA_400)
+		puDecChroma(pu);
 }
 
-void puDecLuma(puStruct pu)
+void puDecLuma(puStruct &pu)
 {
 	// Decode the top-left PB
 	if (DecodeDecision(CTX_PB_LUMA_MODE_DC))
@@ -1009,7 +1034,7 @@ void puDecLuma(puStruct pu)
 	}
 
 	// Decode the top-row PBs
-	for (u8 x = 1; x < CU_SIZE / 8; x++)
+	for (u8 x = 1; x < pu.width; x++)
 	{
 		if (DecodeDecision(CTX_PB_LUMA_MODE_DC))
 		{
@@ -1047,66 +1072,66 @@ void puDecLuma(puStruct pu)
 	}
 
 	// Decode the remaining rows of PBs
-	for (u8 y = 1; y < CU_SIZE / 8; y++)
+	for (u8 y = 1; y < pu.height; y++)
 	{
 		// Decode the leftmost PB of each row
 		if (DecodeDecision(CTX_PB_LUMA_MODE_DC))
 		{
-			pu.modeLuma[CU_SIZE / 8 * y] = 0;
+			pu.modeLuma[pu.stride * y] = 0;
 		}
 		else
 		{
-			if (pu.modeLuma[CU_SIZE / 8 * (y - 1)] != 0)
+			if (pu.modeLuma[pu.stride * (y - 1)] != 0)
 			{
 
 				if (DecodeDecision(CTX_PB_LUMA_COPY_MODE))
 				{
-					pu.modeLuma[CU_SIZE / 8 * y] = pu.modeLuma[CU_SIZE / 8 * (y - 1)];
+					pu.modeLuma[pu.stride * y] = pu.modeLuma[pu.stride * (y - 1)];
 				}
 				else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
 				{
-					u8 dir = (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1)] - 25));
+					u8 dir = (pu.modeLuma[pu.stride * (y - 1)] <= 16) ? (pu.modeLuma[pu.stride * (y - 1)] - 1) : (pu.modeLuma[pu.stride * (y - 1)] <= 24 ? (pu.modeLuma[pu.stride * (y - 1)] - 17) : (pu.modeLuma[pu.stride * (y - 1)] - 25));
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 				else
 				{
 					u8 dir = puDecDir();
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 			}
 			else
 			{
 				u8 dir = puDecDir();
 				u8 type = puDecType();
-				pu.modeLuma[CU_SIZE / 8 * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+				pu.modeLuma[pu.stride * y] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 			}
 		}
 
 		// Decode the remaining PBs of each row
-		for (u8 x = 1; x < CU_SIZE / 8; x++)
+		for (u8 x = 1; x < pu.width; x++)
 		{
 			if (DecodeDecision(CTX_PB_LUMA_MODE_DC))
 			{
-				pu.modeLuma[CU_SIZE / 8 * y + x] = 0;
+				pu.modeLuma[pu.stride * y + x] = 0;
 				continue;
 			}
 
-			u8 dirSrcLeft = (pu.modeLuma[CU_SIZE / 8 * y + x - 1] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * y + x - 1] - 1) : (pu.modeLuma[CU_SIZE / 8 * y + x - 1] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * y + x - 1] - 17) : (pu.modeLuma[CU_SIZE / 8 * y + x - 1] - 25));
-			u8 dirSrcTop = (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] <= 16) ? (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] - 1) : (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] <= 24 ? (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] - 17) : (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] - 25));
+			u8 dirSrcLeft = (pu.modeLuma[pu.stride * y + x - 1] <= 16) ? (pu.modeLuma[pu.stride * y + x - 1] - 1) : (pu.modeLuma[pu.stride * y + x - 1] <= 24 ? (pu.modeLuma[pu.stride * y + x - 1] - 17) : (pu.modeLuma[pu.stride * y + x - 1] - 25));
+			u8 dirSrcTop = (pu.modeLuma[pu.stride * (y - 1) + x] <= 16) ? (pu.modeLuma[pu.stride * (y - 1) + x] - 1) : (pu.modeLuma[pu.stride * (y - 1) + x] <= 24 ? (pu.modeLuma[pu.stride * (y - 1) + x] - 17) : (pu.modeLuma[pu.stride * (y - 1) + x] - 25));
 
-			bool isDCLeft = (pu.modeLuma[CU_SIZE / 8 * y + x - 1] == 0);
-			bool isDCTop = (pu.modeLuma[CU_SIZE / 8 * (y - 1) + x] == 0);
+			bool isDCLeft = (pu.modeLuma[pu.stride * y + x - 1] == 0);
+			bool isDCTop = (pu.modeLuma[pu.stride * (y - 1) + x] == 0);
 
 			if (!isDCLeft && !isDCTop)
 			{
 				if (DecodeDecision(CTX_PB_LUMA_COPY_MODE))
 				{
 					if (!DecodeDecision(CTX_PB_LUMA_COPY_SOURCE))
-						pu.modeLuma[CU_SIZE / 8 * y + x] = pu.modeLuma[CU_SIZE / 8 * y + x - 1];
+						pu.modeLuma[pu.stride * y + x] = pu.modeLuma[pu.stride * y + x - 1];
 					else
-						pu.modeLuma[CU_SIZE / 8 * y + x] = pu.modeLuma[CU_SIZE / 8 * (y - 1) + x];
+						pu.modeLuma[pu.stride * y + x] = pu.modeLuma[pu.stride * (y - 1) + x];
 				}
 				else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
 				{
@@ -1117,73 +1142,77 @@ void puDecLuma(puStruct pu)
 						dir = dirSrcTop;
 
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 				else
 				{
 					u8 dir = puDecDir();
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 			}
 			else if (!isDCLeft && isDCTop)
 			{
 				if (DecodeDecision(CTX_PB_LUMA_COPY_MODE))
 				{
-					pu.modeLuma[CU_SIZE / 8 * y + x] = pu.modeLuma[CU_SIZE / 8 * y + x - 1];
+					pu.modeLuma[pu.stride * y + x] = pu.modeLuma[pu.stride * y + x - 1];
 				}
 				else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
 				{
 					u8 dir = dirSrcLeft;
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 				else
 				{
 					u8 dir = puDecDir();
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 			}
 			else if (isDCLeft && !isDCTop)
 			{
 				if (DecodeDecision(CTX_PB_LUMA_COPY_MODE))
 				{
-					pu.modeLuma[CU_SIZE / 8 * y + x] = pu.modeLuma[CU_SIZE / 8 * (y - 1) + x];
+					pu.modeLuma[pu.stride * y + x] = pu.modeLuma[pu.stride * (y - 1) + x];
 				}
 				else if (DecodeDecision(CTX_PB_LUMA_COPY_DIR))
 				{
 					u8 dir = dirSrcTop;
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 				else
 				{
 					u8 dir = puDecDir();
 					u8 type = puDecType();
-					pu.modeLuma[CU_SIZE / 8 * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+					pu.modeLuma[pu.stride * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 				}
 			}
 			else
 			{
 				u8 dir = puDecDir();
 				u8 type = puDecType();
-				pu.modeLuma[CU_SIZE / 8 * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
+				pu.modeLuma[pu.stride * y + x] = (type == 0) ? (dir + 1) : ((type == 1) ? dir + 17 : dir + 25);
 			}
 		}
 	}
 }
 
-void puDecChroma(puStruct pu)
+void puDecChroma(puStruct &pu)
 {
-	// Determine the number of chroma PBs in the CU
-	const u16 numChromaPB = CU_SIZE * CU_SIZE / 256;
+	// Determine the size factors for the chroma PBs
+	u8 widthDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
 
 	// Process each of the chroma modes
-	for (u8 i = 0; i < numChromaPB; i++)
+	for (u8 y = 0; y < pu.height / heightDiv; y++)
 	{
-		pu.modeChroma[i] = DecodeDecision(CTX_PB_CHROMA_SOURCE_MSB) << 1;
-		pu.modeChroma[i] |= DecodeDecision(CTX_PB_CHROMA_SOURCE_LSB);
+		for (u8 x = 0; x < pu.width / widthDiv; x++)
+		{
+			pu.modeChroma[pu.stride * y + x] = DecodeDecision(CTX_PB_CHROMA_SOURCE_MSB) << 1;
+			pu.modeChroma[pu.stride * y + x] |= DecodeDecision(CTX_PB_CHROMA_SOURCE_LSB);
+		}
 	}
 }
 
@@ -1235,35 +1264,42 @@ u8 puDecType()
 void rtuDec(rtuStruct rtu)
 {
 	// Process each luma residual transform block (RTB)
-	for (u8 y = 0; y < CU_SIZE; y += 8)
+	for (u8 y = 0; y < rtu.height; y += 8)
 	{
-		for (u8 x = 0; x < CU_SIZE; x += 8)
+		for (u8 x = 0; x < rtu.width; x += 8)
 		{
-			rtbDec(&rtu.rtbLuma[CU_SIZE * y + x], COMPONENT_LUMA, rtu.scanLuma[CU_SIZE / 8 * (y / 8) + x / 8]);
+			rtbDec(&rtu.rtbLuma[rtu.stride * y + x], rtu.stride, COMPONENT_LUMA, rtu.scanLuma[rtu.stride / 8 * (y / 8) + x / 8]);
 		}
 	}
 
+	// Bypass chroma coding if grayscale
+	if (rtu.chromaSub == CHROMA_400)
+		return;
+
+	// Determine the size factors for the chroma RTBs
+	u8 widthDiv = (rtu.chromaSub == CHROMA_444) ? 1 : 2;
+	u8 heightDiv = (rtu.chromaSub == CHROMA_444) ? 1 : 2;
+
 	// Process each chroma residual transform block (RTB)
-	for (u8 y = 0; y < CU_SIZE / 2; y += 8)
+	for (u8 y = 0; y < rtu.height / heightDiv; y += 8)
 	{
-		for (u8 x = 0; x < CU_SIZE / 2; x += 8)
+		for (u8 x = 0; x < rtu.width / widthDiv; x += 8)
 		{
-			rtbDec(&rtu.rtbChroma1[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
-			rtbDec(&rtu.rtbChroma2[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, rtu.scanChroma[CU_SIZE / 16 * (y / 8) + x / 8]);
+			rtbDec(&rtu.rtbChroma1[rtu.stride * y + x], rtu.stride, COMPONENT_CHROMA, rtu.scanChroma[rtu.stride / 8 * (y / 8) + x / 8]);
+			rtbDec(&rtu.rtbChroma2[rtu.stride * y + x], rtu.stride, COMPONENT_CHROMA, rtu.scanChroma[rtu.stride / 8 * (y / 8) + x / 8]);
 		}
 	}
 }
 
-void rtbDec(s16 *rtb, Component comp, ScanDir dir)
+void rtbDec(s16 *rtb, u8 stride, Component comp, ScanDir dir)
 {
 	// Define the context offsets
-	const u8 stride = (comp == COMPONENT_LUMA) ? CU_SIZE : (CU_SIZE / 2);
 	const u8 ctxBase = (comp == COMPONENT_LUMA) ? CTX_RTB_LUMA_BASE : CTX_RTB_CHROMA_BASE;
 
 	// Clear the RTB
-	for (u8 y = 0; y < 7; y++)
+	for (u8 y = 0; y < RTB_SIZE; y++)
 	{
-		memset(&rtb[stride * y], 0, 7 * sizeof(s16));
+		memset(&rtb[stride * y], 0, RTB_SIZE * sizeof(s16));
 	}
 
 	// Check if the block was coded
@@ -1280,8 +1316,8 @@ void rtbDec(s16 *rtb, Component comp, ScanDir dir)
 
 	// Decode the significance map
 	u8 numSig = 0;
-	s16 sigMap[49];
-	memset(sigMap, 0, 49 * sizeof(s16));
+	s16 sigMap[RTB_SIZE * RTB_SIZE];
+	memset(sigMap, 0, RTB_SIZE * RTB_SIZE * sizeof(s16));
 	for (u8 i = 0; i <= lastSig; i++)
 	{
 		sigMap[i] = DecodeDecision(ctxBase + CTX_RTB_SIG_FLAG_OFFSET + i);
@@ -1291,7 +1327,7 @@ void rtbDec(s16 *rtb, Component comp, ScanDir dir)
 	}
 
 	// Check if the absolute coefficient is greater than 1
-	s16 coeffVal[49];
+	s16 coeffVal[RTB_SIZE * RTB_SIZE];
 	for (u8 i = 0; i < numSig; i++)
 	{
 		if (!DecodeDecision(ctxBase + CTX_RTB_ABS_COEFF_GREATER_1_OFFSET))
@@ -1348,65 +1384,68 @@ void rtbDec(s16 *rtb, Component comp, ScanDir dir)
 	if (dir == SCAN_HORZ)
 	{
 		u8 ind = 0;
-		for (u8 y = 0; y < 7; y++)
+		u8 sigInd = 0;
+		for (u8 y = 0; y < RTB_SIZE; y++)
 		{
-			for (u8 x = 0; x < 7; x++)
+			for (u8 x = 0; x < RTB_SIZE; x++)
 			{
-				if (sigMap[7 * y + x])
+				if (sigMap[sigInd])
 				{
 					rtb[stride * y + x] = coeffVal[ind];
 					ind++;
 				}
+				sigInd++;
+			}
+		}
+	}
+	else if (dir == SCAN_VERT)
+	{
+		u8 ind = 0;
+		u8 sigInd = 0;
+		for (u8 x = 0; x < RTB_SIZE; x++)
+		{
+			for (u8 y = 0; y < RTB_SIZE; y++)
+			{
+				if (sigMap[sigInd])
+				{
+					rtb[stride * y + x] = coeffVal[ind];
+					ind++;
+				}
+				sigInd++;
 			}
 		}
 	}
 	else
-	//else if (dir == SCAN_VERT)
 	{
 		u8 ind = 0;
-		for (u8 x = 0; x < 4; x++)
+		u8 sigInd = 0;
+		for (u8 i = 0; i < RTB_SIZE; i++)
 		{
-			for (u8 y = 0; y < 4; y++)
+			u8 x = 0;
+			for (s8 y = i; y >= 0; y--)
 			{
-				if (sigMap[7 * x + y])
+				if (sigMap[sigInd])
 				{
 					rtb[stride * y + x] = coeffVal[ind];
 					ind++;
 				}
+				sigInd++;
+				x++;
+			}
+		}
+		for (u8 i = 1; i < RTB_SIZE; i++)
+		{
+			u8 y = RTB_SIZE - 1;
+			for (u8 x = i; x < RTB_SIZE; x++)
+			{
+				if (sigMap[sigInd])
+				{
+					rtb[stride * y + x] = coeffVal[ind];
+					ind++;
+				}
+				sigInd++;
+				y--;
 			}
 		}
 	}
-	//else
-	//{
-	//	u8 ind = 0;
-	//	u8 sigInd = 0;
-	//	for (u8 i = 0; i < 7; i++)
-	//	{
-	//		u8 x = 0;
-	//		for (s8 y = i; y >= 0; y--)
-	//		{
-	//			if (sigMap[sigInd])
-	//			{
-	//				rtb[stride * y + x] = coeffVal[ind];
-	//				ind++;
-	//			}
-	//			sigInd++;
-	//			x++;
-	//		}
-	//	}
-	//	for (u8 i = 1; i < 7; i++)
-	//	{
-	//		u8 y = 6;
-	//		for (u8 x = i; x < 7; x++)
-	//		{
-	//			if (sigMap[sigInd])
-	//			{
-	//				rtb[stride * y + x] = coeffVal[ind];
-	//				ind++;
-	//			}
-	//			sigInd++;
-	//			y--;
-	//		}
-	//	}
-	//}
 }

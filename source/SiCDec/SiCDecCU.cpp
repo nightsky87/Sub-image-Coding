@@ -1,172 +1,146 @@
 #include "SiCDecCU.h"
 
-void SiCDecCU(cuStruct cu, u32 stride, paramStruct param)
+void SiCDecCU(s16 *img, u16 width, u16 height, paramStruct param)
 {
 	// Create a buffer for the coding blocks (CB) and the sub-image coding blocks (SCB)
 	const u16 cbNumPix = CU_SIZE * CU_SIZE;
+
 	static s16 cbLuma[cbNumPix], cbResLuma[cbNumPix];
-	static s16 cbChroma1[cbNumPix >> 2], cbResChroma1[cbNumPix >> 2];
-	static s16 cbChroma2[cbNumPix >> 2], cbResChroma2[cbNumPix >> 2];
-	static s16 vscbLuma[cbNumPix >> 3];
-	static s16 vscbChroma1[cbNumPix >> 5];
-	static s16 vscbChroma2[cbNumPix >> 5];
-	static s16 hscbLuma[cbNumPix >> 3];
-	static s16 hscbChroma1[cbNumPix >> 5];
-	static s16 hscbChroma2[cbNumPix >> 5];
+	static s16 cbChroma1[cbNumPix], cbResChroma1[cbNumPix];
+	static s16 cbChroma2[cbNumPix], cbResChroma2[cbNumPix];
+
+	static s16 vscbLuma[cbNumPix / 8];
+	static s16 vscbChroma1[cbNumPix / 8];
+	static s16 vscbChroma2[cbNumPix / 8];
+
+	static s16 hscbLuma[cbNumPix / 8];
+	static s16 hscbChroma1[cbNumPix / 8];
+	static s16 hscbChroma2[cbNumPix / 8];
 
 	// Define the horizontal and vertical sub-coding units
-	static scuStruct vscu = { vscbLuma, vscbChroma1, vscbChroma2 };
-	static scuStruct hscu = { hscbLuma, hscbChroma1, hscbChroma2 };
+	static cuStruct cu = { cbLuma, cbChroma1, cbChroma2, CU_SIZE, CU_SIZE, CU_SIZE, param.chromaSub };
+	static scuStruct hscu = { hscbLuma, hscbChroma1, hscbChroma2, CU_SIZE / 8, CU_SIZE, CU_SIZE / 8, param.chromaSub };
+	static scuStruct vscu = { vscbLuma, vscbChroma1, vscbChroma2, CU_SIZE, CU_SIZE / 8, CU_SIZE, param.chromaSub };
 
 	// Fill all components with zeros
 	memset(cbLuma, 0, cbNumPix * sizeof(s16));
-	memset(cbChroma1, 0, cbNumPix / 4 * sizeof(s16));
-	memset(cbChroma2, 0, cbNumPix / 4 * sizeof(s16));
+	memset(cbChroma1, 0, cbNumPix * sizeof(s16));
+	memset(cbChroma2, 0, cbNumPix * sizeof(s16));
+
 	memset(vscbLuma, 0, cbNumPix / 8 * sizeof(s16));
-	memset(vscbChroma1, 0, cbNumPix / 32 * sizeof(s16));
-	memset(vscbChroma2, 0, cbNumPix / 32 * sizeof(s16));
+	memset(vscbChroma1, 0, cbNumPix / 8 * sizeof(s16));
+	memset(vscbChroma2, 0, cbNumPix / 8 * sizeof(s16));
+
 	memset(hscbLuma, 0, cbNumPix / 8 * sizeof(s16));
-	memset(hscbChroma1, 0, cbNumPix / 32 * sizeof(s16));
-	memset(hscbChroma2, 0, cbNumPix / 32 * sizeof(s16));
+	memset(hscbChroma1, 0, cbNumPix / 8 * sizeof(s16));
+	memset(hscbChroma2, 0, cbNumPix / 8 * sizeof(s16));
 
 	// Decode the sub-image transform units (STUs)
-	static stuStruct stu = { &vscu, &hscu };
+	static stuStruct stu = { &vscu, &hscu, CU_SIZE, CU_SIZE, CU_SIZE, param.chromaSub };
 	stuDec(stu);
-	stuDequantConst(stu, param.q1);
+	dequantConst(stu, param.q1);
 
 	// Apply the inverse DCT to the sub-images
-	stuInverse(stu);
+	tuInverse(stu);
 
-	// Copy back the reconstructed vertical SCB pixels
-	for (u8 y = 7; y < CU_SIZE / 2; y += 8)
-	{
-		memcpy(&cbLuma[y * CU_SIZE], &vscbLuma[(y >> 3) * CU_SIZE], CU_SIZE * sizeof(s16));
-		memcpy(&cbChroma1[y * CU_SIZE / 2], &vscbChroma1[(y >> 3) * CU_SIZE / 2], CU_SIZE * sizeof(s16) / 2);
-		memcpy(&cbChroma2[y * CU_SIZE / 2], &vscbChroma2[(y >> 3) * CU_SIZE / 2], CU_SIZE * sizeof(s16) / 2);
-	}
-	for (u8 y = CU_SIZE / 2 + 7; y < CU_SIZE; y += 8)
-	{
-		memcpy(&cbLuma[y * CU_SIZE], &vscbLuma[(y >> 3) * CU_SIZE], CU_SIZE * sizeof(s16));
-	}
-
-	// Copy back the reconstructed horizontal SCB pixels
-	for (u8 y = 0; y < CU_SIZE / 2; y++)
-	{
-		if (y % 8 != 7)
-		{
-			for (u8 x = 7; x < CU_SIZE / 2; x += 8)
-			{
-				cbLuma[y * CU_SIZE + x] = hscbLuma[y * CU_SIZE / 8 + (x >> 3)];
-				cbChroma1[y * CU_SIZE / 2 + x] = hscbChroma1[y * CU_SIZE / 16 + (x >> 3)];
-				cbChroma2[y * CU_SIZE / 2 + x] = hscbChroma2[y * CU_SIZE / 16 + (x >> 3)];
-			}
-			for (u8 x = CU_SIZE / 2 + 7; x < CU_SIZE; x += 8)
-			{
-				cbLuma[y * CU_SIZE + x] = hscbLuma[y * CU_SIZE / 8 + (x >> 3)];
-			}
-		}
-		else
-		{
-			for (u8 x = 7; x < CU_SIZE / 2; x += 8)
-			{
-				cbLuma[y * CU_SIZE + x] += hscbLuma[y * CU_SIZE / 8 + (x >> 3)];
-				cbChroma1[y * CU_SIZE / 2 + x] += hscbChroma1[y * CU_SIZE / 16 + (x >> 3)];
-				cbChroma2[y * CU_SIZE / 2 + x] += hscbChroma2[y * CU_SIZE / 16 + (x >> 3)];
-
-				cbLuma[y * CU_SIZE + x] >>= 1;
-				cbChroma1[y * CU_SIZE / 2 + x] >>= 1;
-				cbChroma2[y * CU_SIZE / 2 + x] >>= 1;
-			}
-			for (u8 x = CU_SIZE / 2 + 7; x < CU_SIZE; x += 8)
-			{
-				cbLuma[y * CU_SIZE + x] += hscbLuma[y * CU_SIZE / 8 + (x >> 3)];
-				cbLuma[y * CU_SIZE + x] >>= 1;
-			}
-		}
-	}
-	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
-	{
-		if (y % 8 != 7)
-		{
-			for (u8 x = 7; x < CU_SIZE; x += 8)
-			{
-				cbLuma[y * CU_SIZE + x] = hscbLuma[y * CU_SIZE / 8 + (x >> 3)];
-			}
-		}
-		else
-		{
-			for (u8 x = 7; x < CU_SIZE; x += 8)
-			{
-				cbLuma[y * CU_SIZE + x] += hscbLuma[y * CU_SIZE / 8 + (x >> 3)];
-				cbLuma[y * CU_SIZE + x] >>= 1;
-			}
-		}
-	}
+	// Copy back the reconstructed vertical SCU pixels
+	copyFromSCU(cu, hscu, vscu);
 
 	// Define the prediction unit (PU)
-	static cuStruct thisCU = { cbLuma, cbChroma1, cbChroma2 };
-	static u8 pbModeLuma[cbNumPix >> 6];
-	static u8 pbModeChroma[cbNumPix >> 8];
-	static scanDir scanLuma[cbNumPix >> 6];
-	static scanDir scanChroma[cbNumPix >> 8];
-	static puStruct pu = { &thisCU, pbModeLuma, pbModeChroma, scanLuma, scanChroma };
+	static u8 pbModeLuma[cbNumPix / 64];
+	static u8 pbModeChroma[cbNumPix / 64];
+	static ScanDir scanLuma[cbNumPix / 64];
+	static ScanDir scanChroma[cbNumPix / 64];
+	static puStruct pu = { &cu, pbModeLuma, pbModeChroma, scanLuma, scanChroma, CU_SIZE / 8, CU_SIZE / 8, CU_SIZE / 8, param.chromaSub };
 
 	// Decode the prediction modes and apply prediction
 	puDec(pu);
-	predPU(pu);
+	pred(pu);
 
 	// Decode and transform the residual
-	static rtuStruct rtu = { cbResLuma, cbResChroma1, cbResChroma2, scanLuma, scanChroma };
-	//rtuDec(rtu);
-	//rtuDequantConst(rtu, param.q2);
-	//rtuInverse(rtu);
+	static rtuStruct rtu = { cbResLuma, cbResChroma1, cbResChroma2, scanLuma, scanChroma, CU_SIZE, CU_SIZE, CU_SIZE, param.chromaSub };
+	rtuDec(rtu);
+	dequantConst(rtu, param.q2);
+	tuInverse(rtu);
 
-	//// Reconstruct the CU
-	//for (u16 y = 0; y < CU_SIZE / 2; y++)
-	//{
-	//	if (y % 8 == 7)
-	//		continue;
-
-	//	for (u16 x = 0; x < CU_SIZE / 2; x++)
-	//	{
-	//		if (x % 8 == 7)
-	//			continue;
-
-	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-	//		cbChroma1[CU_SIZE / 2 * y + x] += cbResChroma1[CU_SIZE / 2 * y + x];
-	//		cbChroma2[CU_SIZE / 2 * y + x] += cbResChroma2[CU_SIZE / 2 * y + x];
-	//	}
-	//	for (u16 x = CU_SIZE / 2; x < CU_SIZE; x++)
-	//	{
-	//		if (x % 8 == 7)
-	//			continue;
-
-	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-	//	}
-	//}
-	//for (u16 y = CU_SIZE / 2; y < CU_SIZE; y++)
-	//{
-	//	if (y % 8 == 7)
-	//		continue;
-
-	//	for (u16 x = 0; x < CU_SIZE; x++)
-	//	{
-	//		if (x % 8 == 7)
-	//			continue;
-
-	//		cbLuma[CU_SIZE * y + x] += cbResLuma[CU_SIZE * y + x];
-	//	}
-	//}
+	// Reconstruct the CU
+	static cuStruct cuRes = { cbResLuma, cbResChroma1, cbResChroma2, CU_SIZE, CU_SIZE, CU_SIZE, param.chromaSub };
+	cu = cu + cuRes;
 
 	// Copy pixels to the image
-	for (u8 y = 0; y < CU_SIZE / 2; y++)
+	copyFromCU(img, width, height, cu);
+}
+
+void copyFromCU(s16 *img, u16 width, u16 height, cuStruct &cu)
+{
+	// Calculate the channel offset
+	const u32 chOffset = width * height;
+
+	// Copy luma pixels to the CBs and the SCBs
+	for (u8 y = 0; y < cu.height; y++)
 	{
-		memcpy(&cu.cbLuma[y * stride], &cbLuma[y * CU_SIZE], CU_SIZE * sizeof(s16));
-		memcpy(&cu.cbChroma1[y * stride / 2], &cbChroma1[y * CU_SIZE / 2], CU_SIZE * sizeof(s16) / 2);
-		memcpy(&cu.cbChroma2[y * stride / 2], &cbChroma2[y * CU_SIZE / 2], CU_SIZE * sizeof(s16) / 2);
+		for (u8 x = 0; x < cu.width; x++)
+		{
+			img[width * y + x] = cu.cbLuma[cu.stride * y + x];
+		}
 	}
-	for (u8 y = CU_SIZE / 2; y < CU_SIZE; y++)
+
+	// Copy chroma pixels to the CBs and the SCBs
+	if (cu.chromaSub == CHROMA_444)
 	{
-		memcpy(&cu.cbLuma[y * stride], &cbLuma[y * CU_SIZE], CU_SIZE * sizeof(s16));
+		for (u8 y = 0; y < cu.height; y++)
+		{
+			for (u8 x = 0; x < cu.width; x++)
+			{
+				img[width * y + x + chOffset] = cu.cbChroma1[cu.stride * y + x];
+				img[width * y + x + 2 * chOffset] = cu.cbChroma2[cu.stride * y + x];
+			}
+		}
+	}
+	else if (cu.chromaSub == CHROMA_420)
+	{
+		for (u8 y = 0; y < cu.height; y += 2)
+		{
+			for (u8 x = 0; x < cu.width; x += 2)
+			{
+				img[width * y + x + chOffset] = cu.cbChroma1[cu.stride * (y / 2) + x / 2];
+				img[width * y + x + 1 + chOffset] = cu.cbChroma1[cu.stride * (y / 2) + x / 2];
+				img[width * (y + 1) + x + chOffset] = cu.cbChroma1[cu.stride * (y / 2) + x / 2];
+				img[width * (y + 1) + x + 1 + chOffset] = cu.cbChroma1[cu.stride * (y / 2) + x / 2];
+
+
+				img[width * y + x + 2 * chOffset] = cu.cbChroma2[cu.stride * (y / 2) + x / 2];
+				img[width * y + x + 1 + 2 * chOffset] = cu.cbChroma2[cu.stride * (y / 2) + x / 2];
+				img[width * (y + 1) + x + 2 * chOffset] = cu.cbChroma2[cu.stride * (y / 2) + x / 2];
+				img[width * (y + 1) + x + 1 + 2 * chOffset] = cu.cbChroma2[cu.stride * (y / 2) + x / 2];
+			}
+		}
+	}
+}
+
+void copyFromSCU(cuStruct &cu, scuStruct &hscu, scuStruct &vscu)
+{
+	// Copy pixels from the CU to the SCU
+	for (u8 y = 7; y < cu.height; y += 8)
+	{
+		for (u8 x = 0; x < cu.width; x++)
+		{
+			cu.cbLuma[cu.stride * x + y] = hscu.scbLuma[hscu.stride * x + y / 8];
+			cu.cbChroma1[cu.stride * x + y] = hscu.scbChroma1[hscu.stride * x + y / 8];
+			cu.cbChroma2[cu.stride * x + y] = hscu.scbChroma2[hscu.stride * x + y / 8];
+
+			if (x % 8 < 7)
+			{
+				cu.cbLuma[cu.stride * y + x] = vscu.scbLuma[vscu.stride * (y / 8) + x];
+				cu.cbChroma1[cu.stride * y + x] = vscu.scbChroma1[vscu.stride * (y / 8) + x];
+				cu.cbChroma2[cu.stride * y + x] = vscu.scbChroma2[vscu.stride * (y / 8) + x];
+			}
+			else
+			{
+				cu.cbLuma[cu.stride * y + x] = (cu.cbLuma[cu.stride * y + x] + vscu.scbLuma[vscu.stride * (y / 8) + x] + 1) / 2;
+				cu.cbChroma1[cu.stride * y + x] = (cu.cbChroma1[cu.stride * y + x] + vscu.scbChroma1[vscu.stride * (y / 8) + x] + 1) / 2;
+				cu.cbChroma2[cu.stride * y + x] = (cu.cbChroma2[cu.stride * y + x] + vscu.scbChroma2[vscu.stride * (y / 8) + x] + 1) / 2;
+			}
+		}
 	}
 }

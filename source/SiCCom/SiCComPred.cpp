@@ -1,14 +1,14 @@
 #include "SiCComPred.h"
 
-void predPU(puStruct &pu, ChromaSub chromaSub)
+void pred(puStruct &pu)
 {
 	// Perform predictions on the luma component
 	predLuma(pu);
 
 	// Perform predictions on the chroma components
-	if (chromaSub != CHROMA_400)
+	if (pu.chromaSub != CHROMA_400)
 	{
-		predChroma(pu, chromaSub);
+		predChroma(pu);
 	}
 }
 
@@ -20,7 +20,7 @@ void predLuma(puStruct &pu)
 	// Process the top-left prediction block
 	for (u8 i = 1; i <= 8; i++)
 	{
-		memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[CU_SIZE * (i - 1)], 8 * sizeof(s16));
+		memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[pu.cu->stride * (i - 1)], 8 * sizeof(s16));
 	}
 	pb[8] = pb[17];
 	pb[72] = pb[73];
@@ -33,15 +33,15 @@ void predLuma(puStruct &pu)
 	predBlock(pb, pu.modeLuma[0]);
 	for (u8 i = 1; i < 8; i++)
 	{
-		memcpy(&pu.cu->cbLuma[CU_SIZE * (i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
+		memcpy(&pu.cu->cbLuma[pu.cu->stride * (i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
 	}
 
 	// Process the top row of prediction blocks
-	for (u8 x = 8; x < CU_SIZE; x += 8)
+	for (u8 x = 8; x < pu.cu->width; x += 8)
 	{
 		for (u8 i = 1; i <= 8; i++)
 		{
-			memcpy(&pb[9 * i], &pu.cu->cbLuma[CU_SIZE * (i - 1) + x - 1], 9 * sizeof(s16));
+			memcpy(&pb[9 * i], &pu.cu->cbLuma[pu.cu->stride * (i - 1) + x - 1], 9 * sizeof(s16));
 		}
 		pb[0] = pb[9];
 		pb[8] = pb[17];
@@ -52,17 +52,17 @@ void predLuma(puStruct &pu)
 		predBlock(pb, pu.modeLuma[x / 8]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbLuma[CU_SIZE * (i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbLuma[pu.cu->stride * (i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
 		}
 	}
 
 	// Process the remaining rows of prediction blocks
-	for (u8 y = 8; y < CU_SIZE; y += 8)
+	for (u8 y = 8; y < pu.cu->height; y += 8)
 	{
 		// Process the left-most prediction block of the current row
 		for (u8 i = 0; i <= 8; i++)
 		{
-			memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[CU_SIZE * (y + i - 1)], 8 * sizeof(s16));
+			memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[pu.cu->stride * (y + i - 1)], 8 * sizeof(s16));
 		}
 		pb[0] = pb[1];
 		pb[72] = pb[73];
@@ -70,29 +70,29 @@ void predLuma(puStruct &pu)
 		{
 			pb[9 * i] = ((8 - i) * pb[0] + i * pb[72] + 4) / 8;
 		}
-		predBlock(pb, pu.modeLuma[CU_SIZE / 8 * (y / 8)]);
+		predBlock(pb, pu.modeLuma[pu.stride * (y / 8)]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbLuma[CU_SIZE * (y + i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbLuma[pu.cu->stride * (y + i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
 		}
 
 		// Process the remaining blocks of the current row
-		for (u8 x = 8; x < CU_SIZE; x += 8)
+		for (u8 x = 8; x < pu.cu->width; x += 8)
 		{
 			for (u8 i = 0; i <= 8; i++)
 			{
-				memcpy(&pb[9 * i], &pu.cu->cbLuma[CU_SIZE * (y + i - 1) + x - 1], 9 * sizeof(s16));
+				memcpy(&pb[9 * i], &pu.cu->cbLuma[pu.cu->stride * (y + i - 1) + x - 1], 9 * sizeof(s16));
 			}
-			predBlock(pb, pu.modeLuma[CU_SIZE / 8 * (y / 8) + x / 8]);
+			predBlock(pb, pu.modeLuma[pu.stride * (y / 8) + x / 8]);
 			for (u8 i = 1; i < 8; i++)
 			{
-				memcpy(&pu.cu->cbLuma[CU_SIZE * (y + i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
+				memcpy(&pu.cu->cbLuma[pu.cu->stride * (y + i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
 			}
 		}
 	}
 
 	// Assign the scan directions
-	for (u16 i = 0; i < CU_SIZE * CU_SIZE / 64; i++)
+	for (u16 i = 0; i < pu.width * pu.height; i++)
 	{
 		// Assign the scan direction
 		if (pu.modeLuma[i] == 0)
@@ -120,19 +120,20 @@ void predLuma(puStruct &pu)
 	}
 }
 
-void predChroma(puStruct &pu, ChromaSub chromaSub)
+void predChroma(puStruct &pu)
 {
 	// Allocate space for the prediction block
 	static s16 pb1[81], pb2[81];
 
-	// Determine the PU size based on chroma subsampling
-	const u8 puSize = (chromaSub == CHROMA_444) ? CU_SIZE : (CU_SIZE / 2);
+	// Determine the size factors based on chroma subsampling
+	const u8 widthDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
+	const u8 heightDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
 
 	// Process the top-left prediction block
 	for (u8 i = 1; i <= 8; i++)
 	{
-		memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[CU_SIZE * (i - 1)], 8 * sizeof(s16));
-		memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[CU_SIZE * (i - 1)], 8 * sizeof(s16));
+		memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[pu.cu->stride * (i - 1)], 8 * sizeof(s16));
+		memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[pu.cu->stride * (i - 1)], 8 * sizeof(s16));
 	}
 	pb1[8] = pb1[17];
 	pb2[8] = pb2[17];
@@ -150,17 +151,17 @@ void predChroma(puStruct &pu, ChromaSub chromaSub)
 	predBlock(pb1, pb2, &pu.modeLuma[0], pu.modeChroma[0], &pu.scanChroma[0]);
 	for (u8 i = 1; i < 8; i++)
 	{
-		memcpy(&pu.cu->cbChroma1[CU_SIZE * (i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
-		memcpy(&pu.cu->cbChroma2[CU_SIZE * (i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
+		memcpy(&pu.cu->cbChroma1[pu.cu->stride * (i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
+		memcpy(&pu.cu->cbChroma2[pu.cu->stride * (i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
 	}
 
 	// Process the top row of prediction blocks
-	for (u8 x = 8; x < puSize; x += 8)
+	for (u8 x = 8; x < pu.cu->width / widthDiv; x += 8)
 	{
 		for (u8 i = 1; i <= 8; i++)
 		{
-			memcpy(&pb1[9 * i], &pu.cu->cbChroma1[CU_SIZE * (i - 1) + x - 1], 9 * sizeof(s16));
-			memcpy(&pb2[9 * i], &pu.cu->cbChroma2[CU_SIZE * (i - 1) + x - 1], 9 * sizeof(s16));
+			memcpy(&pb1[9 * i], &pu.cu->cbChroma1[pu.cu->stride * (i - 1) + x - 1], 9 * sizeof(s16));
+			memcpy(&pb2[9 * i], &pu.cu->cbChroma2[pu.cu->stride * (i - 1) + x - 1], 9 * sizeof(s16));
 		}
 		pb1[0] = pb1[9];
 		pb2[0] = pb2[9];
@@ -174,19 +175,19 @@ void predChroma(puStruct &pu, ChromaSub chromaSub)
 		predBlock(pb1, pb2, &pu.modeLuma[x / 4], pu.modeChroma[x / 8], &pu.scanChroma[x / 8]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbChroma1[CU_SIZE * (i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
-			memcpy(&pu.cu->cbChroma2[CU_SIZE * (i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma1[pu.cu->stride * (i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma2[pu.cu->stride * (i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
 		}
 	}
 
 	// Process the remaining rows of prediction blocks
-	for (u8 y = 8; y < puSize; y += 8)
+	for (u8 y = 8; y < pu.cu->height / heightDiv; y += 8)
 	{
 		// Process the left-most prediction block of the current row
 		for (u8 i = 0; i <= 8; i++)
 		{
-			memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[CU_SIZE * (y + i - 1)], 8 * sizeof(s16));
-			memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[CU_SIZE * (y + i - 1)], 8 * sizeof(s16));
+			memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[pu.cu->stride * (y + i - 1)], 8 * sizeof(s16));
+			memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[pu.cu->stride * (y + i - 1)], 8 * sizeof(s16));
 		}
 		pb1[0] = pb1[1];
 		pb2[0] = pb2[1];
@@ -197,40 +198,40 @@ void predChroma(puStruct &pu, ChromaSub chromaSub)
 			pb1[9 * i] = ((8 - i) * pb1[0] + i * pb1[72] + 4) / 8;
 			pb2[9 * i] = ((8 - i) * pb2[0] + i * pb2[72] + 4) / 8;
 		}
-		predBlock(pb1, pb2, &pu.modeLuma[CU_SIZE / 8 * (y / 4)], pu.modeChroma[CU_SIZE / 8 * (y / 8)], &pu.scanChroma[CU_SIZE / 8 * (y / 8)]);
+		predBlock(pb1, pb2, &pu.modeLuma[pu.stride * (y / 4)], pu.modeChroma[pu.stride * (y / 8)], &pu.scanChroma[pu.stride * (y / 8)]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbChroma1[CU_SIZE * (y + i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
-			memcpy(&pu.cu->cbChroma2[CU_SIZE * (y + i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma1[pu.cu->stride * (y + i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma2[pu.cu->stride * (y + i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
 		}
 
 		// Process the remaining blocks of the current row
-		for (u8 x = 8; x < puSize; x += 8)
+		for (u8 x = 8; x < pu.cu->width / widthDiv; x += 8)
 		{
 			for (u8 i = 0; i <= 8; i++)
 			{
-				memcpy(&pb1[9 * i], &pu.cu->cbChroma1[CU_SIZE * (y + i - 1) + x - 1], 9 * sizeof(s16));
-				memcpy(&pb2[9 * i], &pu.cu->cbChroma2[CU_SIZE * (y + i - 1) + x - 1], 9 * sizeof(s16));
+				memcpy(&pb1[9 * i], &pu.cu->cbChroma1[pu.cu->stride * (y + i - 1) + x - 1], 9 * sizeof(s16));
+				memcpy(&pb2[9 * i], &pu.cu->cbChroma2[pu.cu->stride * (y + i - 1) + x - 1], 9 * sizeof(s16));
 			}
-			predBlock(pb1, pb2, &pu.modeLuma[CU_SIZE / 8 * (y / 4) + x / 4], pu.modeChroma[CU_SIZE / 8 * (y / 8) + x / 8], &pu.scanChroma[CU_SIZE / 8 * (y / 8) + x / 8]);
+			predBlock(pb1, pb2, &pu.modeLuma[pu.stride * (y / 4) + x / 4], pu.modeChroma[pu.stride * (y / 8) + x / 8], &pu.scanChroma[pu.stride * (y / 8) + x / 8]);
 			for (u8 i = 1; i < 8; i++)
 			{
-				memcpy(&pu.cu->cbChroma1[CU_SIZE * (y + i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
-				memcpy(&pu.cu->cbChroma2[CU_SIZE * (y + i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
+				memcpy(&pu.cu->cbChroma1[pu.cu->stride * (y + i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
+				memcpy(&pu.cu->cbChroma2[pu.cu->stride * (y + i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
 			}
 		}
 	}
 }
 
-void predSearch(puStruct &pu, ChromaSub chromaSub)
+void predSearch(puStruct &pu)
 {
 	// Perform predictions on the luma component
 	predSearchLuma(pu);
 
 	// Perform predictions on the chroma components
-	if (chromaSub != CHROMA_400)
+	if (pu.chromaSub != CHROMA_400)
 	{
-		predSearchChroma(pu, chromaSub);
+		predSearchChroma(pu);
 	}
 }
 
@@ -242,7 +243,7 @@ void predSearchLuma(puStruct &pu)
 	// Process the top-left prediction block
 	for (u8 i = 1; i <= 8; i++)
 	{
-		memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[CU_SIZE * (i - 1)], 8 * sizeof(s16));
+		memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[pu.cu->stride * (i - 1)], 8 * sizeof(s16));
 	}
 	pb[8] = pb[17];
 	pb[72] = pb[73];
@@ -255,15 +256,15 @@ void predSearchLuma(puStruct &pu)
 	predSearchBlock(pb, &pu.modeLuma[0], &pu.scanLuma[0]);
 	for (u8 i = 1; i < 8; i++)
 	{
-		memcpy(&pu.cu->cbLuma[CU_SIZE * (i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
+		memcpy(&pu.cu->cbLuma[pu.cu->stride * (i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
 	}
 
 	// Process the top row of prediction blocks
-	for (u8 x = 8; x < CU_SIZE; x += 8)
+	for (u8 x = 8; x < pu.cu->width; x += 8)
 	{
 		for (u8 i = 1; i <= 8; i++)
 		{
-			memcpy(&pb[9 * i], &pu.cu->cbLuma[CU_SIZE * (i - 1) + x - 1], 9 * sizeof(s16));
+			memcpy(&pb[9 * i], &pu.cu->cbLuma[pu.cu->stride * (i - 1) + x - 1], 9 * sizeof(s16));
 		}
 		pb[0] = pb[9];
 		pb[8] = pb[17];
@@ -274,17 +275,17 @@ void predSearchLuma(puStruct &pu)
 		predSearchBlock(pb, &pu.modeLuma[x / 8], &pu.scanLuma[x / 8]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbLuma[CU_SIZE * (i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbLuma[pu.cu->stride * (i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
 		}
 	}
 
 	// Process the remaining rows of prediction blocks
-	for (u8 y = 8; y < CU_SIZE; y += 8)
+	for (u8 y = 8; y < pu.cu->height; y += 8)
 	{
 		// Process the left-most prediction block of the current row
 		for (u8 i = 0; i <= 8; i++)
 		{
-			memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[CU_SIZE * (y + i - 1)], 8 * sizeof(s16));
+			memcpy(&pb[9 * i + 1], &pu.cu->cbLuma[pu.cu->stride * (y + i - 1)], 8 * sizeof(s16));
 		}
 		pb[0] = pb[1];
 		pb[72] = pb[73];
@@ -292,41 +293,42 @@ void predSearchLuma(puStruct &pu)
 		{
 			pb[9 * i] = ((8 - i) * pb[0] + i * pb[72] + 4) / 8;
 		}
-		predSearchBlock(pb, &pu.modeLuma[CU_SIZE / 8 * (y / 8)], &pu.scanLuma[CU_SIZE / 8 * (y / 8)]);
+		predSearchBlock(pb, &pu.modeLuma[pu.stride * (y / 8)], &pu.scanLuma[pu.stride * (y / 8)]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbLuma[CU_SIZE * (y + i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbLuma[pu.cu->stride * (y + i - 1)], &pb[9 * i + 1], 7 * sizeof(s16));
 		}
 
 		// Process the remaining blocks of the current row
-		for (u8 x = 8; x < CU_SIZE; x += 8)
+		for (u8 x = 8; x < pu.cu->width; x += 8)
 		{
 			for (u8 i = 0; i <= 8; i++)
 			{
-				memcpy(&pb[9 * i], &pu.cu->cbLuma[CU_SIZE * (y + i - 1) + x - 1], 9 * sizeof(s16));
+				memcpy(&pb[9 * i], &pu.cu->cbLuma[pu.cu->stride * (y + i - 1) + x - 1], 9 * sizeof(s16));
 			}
-			predSearchBlock(pb, &pu.modeLuma[CU_SIZE / 8 * (y / 8) + x / 8], &pu.scanLuma[CU_SIZE / 8 * (y / 8) + x / 8]);
+			predSearchBlock(pb, &pu.modeLuma[pu.stride * (y / 8) + x / 8], &pu.scanLuma[pu.stride * (y / 8) + x / 8]);
 			for (u8 i = 1; i < 8; i++)
 			{
-				memcpy(&pu.cu->cbLuma[CU_SIZE * (y + i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
+				memcpy(&pu.cu->cbLuma[pu.cu->stride * (y + i - 1) + x], &pb[9 * i + 1], 7 * sizeof(s16));
 			}
 		}
 	}
 }
 
-void predSearchChroma(puStruct &pu, ChromaSub chromaSub)
+void predSearchChroma(puStruct &pu)
 {
 	// Allocate space for the prediction block
 	static s16 pb1[81], pb2[81];
 
-	// Determine the PU size based on chroma subsampling
-	const u8 puSize = (chromaSub == CHROMA_444) ? CU_SIZE : (CU_SIZE / 2);
+	// Determine the size factors based on chroma subsampling
+	const u8 widthDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
+	const u8 heightDiv = (pu.chromaSub == CHROMA_444) ? 1 : 2;
 
 	// Process the top-left prediction block
 	for (u8 i = 1; i <= 8; i++)
 	{
-		memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[CU_SIZE * (i - 1)], 8 * sizeof(s16));
-		memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[CU_SIZE * (i - 1)], 8 * sizeof(s16));
+		memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[pu.cu->stride * (i - 1)], 8 * sizeof(s16));
+		memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[pu.cu->stride * (i - 1)], 8 * sizeof(s16));
 	}
 	pb1[8] = pb1[17];
 	pb2[8] = pb2[17];
@@ -344,17 +346,17 @@ void predSearchChroma(puStruct &pu, ChromaSub chromaSub)
 	predSearchBlock(pb1, pb2, &pu.modeLuma[0], &pu.modeChroma[0], &pu.scanChroma[0]);
 	for (u8 i = 1; i < 8; i++)
 	{
-		memcpy(&pu.cu->cbChroma1[CU_SIZE * (i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
-		memcpy(&pu.cu->cbChroma2[CU_SIZE * (i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
+		memcpy(&pu.cu->cbChroma1[pu.cu->stride * (i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
+		memcpy(&pu.cu->cbChroma2[pu.cu->stride * (i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
 	}
 
 	// Process the top row of prediction blocks
-	for (u8 x = 8; x < puSize; x += 8)
+	for (u8 x = 8; x < pu.cu->width / widthDiv; x += 8)
 	{
 		for (u8 i = 1; i <= 8; i++)
 		{
-			memcpy(&pb1[9 * i], &pu.cu->cbChroma1[CU_SIZE * (i - 1) + x - 1], 9 * sizeof(s16));
-			memcpy(&pb2[9 * i], &pu.cu->cbChroma2[CU_SIZE * (i - 1) + x - 1], 9 * sizeof(s16));
+			memcpy(&pb1[9 * i], &pu.cu->cbChroma1[pu.cu->stride * (i - 1) + x - 1], 9 * sizeof(s16));
+			memcpy(&pb2[9 * i], &pu.cu->cbChroma2[pu.cu->stride * (i - 1) + x - 1], 9 * sizeof(s16));
 		}
 		pb1[0] = pb1[9];
 		pb2[0] = pb2[9];
@@ -368,19 +370,19 @@ void predSearchChroma(puStruct &pu, ChromaSub chromaSub)
 		predSearchBlock(pb1, pb2, &pu.modeLuma[x / 4], &pu.modeChroma[x / 8], &pu.scanChroma[x / 8]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbChroma1[CU_SIZE * (i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
-			memcpy(&pu.cu->cbChroma2[CU_SIZE * (i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma1[pu.cu->stride * (i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma2[pu.cu->stride * (i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
 		}
 	}
 
 	// Process the remaining rows of prediction blocks
-	for (u8 y = 8; y < puSize; y += 8)
+	for (u8 y = 8; y < pu.cu->height / heightDiv; y += 8)
 	{
 		// Process the left-most prediction block of the current row
 		for (u8 i = 0; i <= 8; i++)
 		{
-			memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[CU_SIZE * (y + i - 1)], 8 * sizeof(s16));
-			memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[CU_SIZE * (y + i - 1)], 8 * sizeof(s16));
+			memcpy(&pb1[9 * i + 1], &pu.cu->cbChroma1[pu.cu->stride * (y + i - 1)], 8 * sizeof(s16));
+			memcpy(&pb2[9 * i + 1], &pu.cu->cbChroma2[pu.cu->stride * (y + i - 1)], 8 * sizeof(s16));
 		}
 		pb1[0] = pb1[1];
 		pb2[0] = pb2[1];
@@ -391,26 +393,26 @@ void predSearchChroma(puStruct &pu, ChromaSub chromaSub)
 			pb1[9 * i] = ((8 - i) * pb1[0] + i * pb1[72] + 4) / 8;
 			pb2[9 * i] = ((8 - i) * pb2[0] + i * pb2[72] + 4) / 8;
 		}
-		predSearchBlock(pb1, pb2, &pu.modeLuma[CU_SIZE / 8 * (y / 4)], &pu.modeChroma[CU_SIZE / 8 * (y / 8)], &pu.scanChroma[CU_SIZE / 8 * (y / 8)]);
+		predSearchBlock(pb1, pb2, &pu.modeLuma[pu.stride * (y / 4)], &pu.modeChroma[pu.stride * (y / 8)], &pu.scanChroma[pu.stride * (y / 8)]);
 		for (u8 i = 1; i < 8; i++)
 		{
-			memcpy(&pu.cu->cbChroma1[CU_SIZE * (y + i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
-			memcpy(&pu.cu->cbChroma2[CU_SIZE * (y + i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma1[pu.cu->stride * (y + i - 1)], &pb1[9 * i + 1], 7 * sizeof(s16));
+			memcpy(&pu.cu->cbChroma2[pu.cu->stride * (y + i - 1)], &pb2[9 * i + 1], 7 * sizeof(s16));
 		}
 
 		// Process the remaining blocks of the current row
-		for (u8 x = 8; x < puSize; x += 8)
+		for (u8 x = 8; x < pu.cu->width / widthDiv; x += 8)
 		{
 			for (u8 i = 0; i <= 8; i++)
 			{
-				memcpy(&pb1[9 * i], &pu.cu->cbChroma1[CU_SIZE * (y + i - 1) + x - 1], 9 * sizeof(s16));
-				memcpy(&pb2[9 * i], &pu.cu->cbChroma2[CU_SIZE * (y + i - 1) + x - 1], 9 * sizeof(s16));
+				memcpy(&pb1[9 * i], &pu.cu->cbChroma1[pu.cu->stride * (y + i - 1) + x - 1], 9 * sizeof(s16));
+				memcpy(&pb2[9 * i], &pu.cu->cbChroma2[pu.cu->stride * (y + i - 1) + x - 1], 9 * sizeof(s16));
 			}
-			predSearchBlock(pb1, pb2, &pu.modeLuma[CU_SIZE / 8 * (y / 4) + x / 4], &pu.modeChroma[CU_SIZE / 8 * (y / 8) + x / 8], &pu.scanChroma[CU_SIZE / 8 * (y / 8) + x / 8]);
+			predSearchBlock(pb1, pb2, &pu.modeLuma[pu.stride * (y / 4) + x / 4], &pu.modeChroma[pu.stride * (y / 8) + x / 8], &pu.scanChroma[pu.stride * (y / 8) + x / 8]);
 			for (u8 i = 1; i < 8; i++)
 			{
-				memcpy(&pu.cu->cbChroma1[CU_SIZE * (y + i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
-				memcpy(&pu.cu->cbChroma2[CU_SIZE * (y + i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
+				memcpy(&pu.cu->cbChroma1[pu.cu->stride * (y + i - 1) + x], &pb1[9 * i + 1], 7 * sizeof(s16));
+				memcpy(&pu.cu->cbChroma2[pu.cu->stride * (y + i - 1) + x], &pb2[9 * i + 1], 7 * sizeof(s16));
 			}
 		}
 	}

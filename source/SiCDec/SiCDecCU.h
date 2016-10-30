@@ -8,6 +8,9 @@
 #include "SiCComBAC.h"
 #include <cstring>
 
-void SiCDecCU(cuStruct cu, u32 stride, paramStruct param);
+void SiCDecCU(s16 *img, u16 width, u16 height, paramStruct param);
+
+void copyFromCU(s16 *img, u16 width, u16 height, cuStruct &cu);
+void copyFromSCU(cuStruct &cu, scuStruct &hscu, scuStruct &vscu);
 
 #endif

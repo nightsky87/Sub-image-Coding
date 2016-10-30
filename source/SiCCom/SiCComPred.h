@@ -4,13 +4,13 @@
 #include "ComDef.h"
 #include <cstring>
 
-void predPU(puStruct &pu, ChromaSub chromaSub);
+void pred(puStruct &pu);
 void predLuma(puStruct &pu);
-void predChroma(puStruct &pu, ChromaSub chromaSub);
+void predChroma(puStruct &pu);
 
-void predSearch(puStruct &pu, ChromaSub chromaSub);
+void predSearch(puStruct &pu);
 void predSearchLuma(puStruct &pu);
-void predSearchChroma(puStruct &pu, ChromaSub chromaSub);
+void predSearchChroma(puStruct &pu);
 
 void predSearchBlock(s16 *pb, u8 *mode, ScanDir *scan);
 void predSearchBlock(s16 *pbChroma1, s16 *pbChroma2, u8 *modeLuma, u8 *modeChroma, ScanDir *scan);

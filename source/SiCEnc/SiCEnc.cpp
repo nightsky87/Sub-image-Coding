@@ -30,13 +30,13 @@ int main()
 
 	// Manually define the parameters for now
 	paramStruct param;
-	param.q1 = 128;
+	param.q1 = 256;
 	param.q2 = param.q1;
 	param.chromaSub = CHROMA_400;
 
 	// Automatically detect grayscale images
 	if (channels == 1)
-		param.chromaSub == CHROMA_400;
+		param.chromaSub = CHROMA_400;
 
 	if (param.chromaSub == CHROMA_444)
 	{
@@ -60,7 +60,9 @@ int main()
 		}
 	}
 
-	CImg<s16> imgRef = img.channel(0);
+	CImg<s16> imgRef = img;
+	if (channels == 1 || param.chromaSub == CHROMA_400)
+		imgRef.channel(0);
 
 	// Initialize the arithmetic encoder with 8 bpp for grayscale images or 24 bpp for color images
 	if (param.chromaSub == CHROMA_400)
@@ -76,6 +78,18 @@ int main()
 			SiCEncCU(&img(x, y), width, height, param);
 		}
 	}
+
+	if (param.chromaSub == CHROMA_400)
+		channels = 1;
+
+	// Terminate the encoding process and write to file
+	EncodeTerminate();
+	WriteBitstream("../../SiCDec/SiCDec/test.sic", trueWidth, trueHeight, channels, param);
+
+	if (channels == 1 || param.chromaSub == CHROMA_400)
+		img.channel(0);
+
+	printf("%.4f\n", img.PSNR(imgRef, 255));
 
 	// Apply the JPEG YCbCr forward transform
 	if (channels == 3)
@@ -98,39 +112,7 @@ int main()
 			}
 		}
 	}
-
-	printf("%.4f\n", img.PSNR(imgRef, 255));
 	img.display();
 
-	//// Terminate the encoding process and write to file
-	//EncodeTerminate();
-	//WriteBitstream("../../SiCDec/SiCDec/test.sic", trueWidth, trueHeight, channels, param);
-
-	//// Handle grayscale and color images separately
-	//if (param.isGray)
-	//{
-	//	img.channel(1) = Y;
-	//	img.channel(2) = Y;
-	//	img.channel(3) = Y;
-	//}
-	//else
-	//{
-	//	// Apply the JPEG YCbCr forward transform
-	//	for (u32 i = 0; i < chOffset; i++)
-	//	{
-	//		double r = round((double)Y(i) + 1.402 * (double)(Cr(i) - 128));
-	//		double g = round((double)Y(i) - 0.344136 * (double)(Cb(i) - 128) - 0.714136 * (double)(Cr(i) - 128));
-	//		double b = round((double)Y(i) + 1.772 * (double)(Cb(i) - 128));
-
-	//		img(i) = (s16)((r < 0) ? 0 : ((r > 255) ? 255 : r));
-	//		img(i + chOffset) = (s16)((g < 0) ? 0 : ((g > 255) ? 255 : g));
-	//		img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
-	//	}
-	//}
-
-	//printf("%.4f\n", img.PSNR(imgRef, 255));
-	//img.display();
-
-	//system("PAUSE");
 	return 0;
 }
