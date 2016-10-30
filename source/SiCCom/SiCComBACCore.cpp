@@ -51,8 +51,6 @@ u8 transIdxLPS(u8 pStateIdx)
 
 void InitializeEncoder(u32 numBytes)
 {
-	u16 i;
-
 	// Clear out all contexts and most-probable symbols
 	memset(ctx, 0, NUM_TOTAL_CONTEXT * sizeof(u8));
 	memset(mps, 0, NUM_TOTAL_CONTEXT * sizeof(u8));
@@ -77,7 +75,8 @@ void InitializeEncoder(u32 numBytes)
 
 void EncodeDecision(u8 ctxIdx, u8 binVal)
 {
-	u8 pStateIdx, qCodIRangeIdx, valMPS, codIRangeLPS;
+	u8 pStateIdx, qCodIRangeIdx, valMPS;
+	u16 codIRangeLPS;
 
 	valMPS = mps[ctxIdx];
 	pStateIdx = ctx[ctxIdx];
@@ -273,7 +272,8 @@ void ReadBitstream(char *fName, u16 *width, u16 *height, u8 *channels, paramStru
 
 u8 DecodeDecision(u8 ctxIdx)
 {
-	u8 binVal, pStateIdx, valMPS, qCodIRangeIdx, codIRangeLPS;
+	u8 binVal, pStateIdx, valMPS, qCodIRangeIdx;
+	u16 codIRangeLPS;
 
 	pStateIdx = ctx[ctxIdx];
 	valMPS = mps[ctxIdx];

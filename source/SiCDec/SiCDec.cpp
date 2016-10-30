@@ -6,15 +6,24 @@
 
 using namespace cimg_library;
 
-int main()
+int main(int argc, char *argv[])
 {
+	// For now, always require two arguments - input file and output file
+	if (argc != 3)
+	{
+		printf("Usage:\n");
+		printf("  SiCDec <input file> <output file>\n");
+		printf("  Note: Only bitmaps are currently supported.\n");
+		return -1;
+	}
+
 	u8 channels;
 	u16 trueWidth, trueHeight;
 
 	paramStruct param;
 
 	// Read the bitstream to memory and initialize the decoding process
-	ReadBitstream("test.sic", &trueWidth, &trueHeight, &channels, &param);
+	ReadBitstream(argv[1], &trueWidth, &trueHeight, &channels, &param);
 	InitializeDecoder();
 
 	// Calculate the modulo-64 dimensions
@@ -40,27 +49,24 @@ int main()
 	// Terminate the encoding process and write to file
 	DecodeTerminate();
 
-	//// Allocate space for the final image
-	//CImg<s16> img(width, height, 1, channels, 0);
+	if (param.chromaSub != CHROMA_400)
+	{
+		// Apply the Rec. 601 inverse color transform
+		const u32 chOffset = width * height;
+		for (u32 i = 0; i < chOffset; i++)
+		{
+			double r = round((double)img(i) + 1.402 * (double)(img(i + 2 * chOffset) - 128));
+			double g = round((double)img(i) - 0.344136 * (double)(img(i + chOffset) - 128) - 0.714136 * (double)(img(i + 2 * chOffset) - 128));
+			double b = round((double)img(i) + 1.772 * (double)(img(i + chOffset) - 128));
 
-	//// Apply the JPEG YCbCr forward transform
-	//const u32 chOffset = width * height;
-	//for (u32 i = 0; i < chOffset; i++)
-	//{
-	//	double r = round((double)Y(i) + 1.402 * (double)(Cr(i) - 128));
-	//	double g = round((double)Y(i) - 0.344136 * (double)(Cb(i) - 128) - 0.714136 * (double)(Cr(i) - 128));
-	//	double b = round((double)Y(i) + 1.772 * (double)(Cb(i) - 128));
+			img(i) = (s16)((r < 0) ? 0 : ((r > 255) ? 255 : r));
+			img(i + chOffset) = (s16)((g < 0) ? 0 : ((g > 255) ? 255 : g));
+			img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
+		}
+	}
 
-	//	img(i) = (s16)((r < 0) ? 0 : ((r > 255) ? 255 : r));
-	//	img(i + chOffset) = (s16)((g < 0) ? 0 : ((g > 255) ? 255 : g));
-	//	img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
-	//}
-
-	CImg<s16> imgRef("../../../../images/Misc/lena_gray.bmp");
-	imgRef.channel(0);
-
-	printf("%.4f\n", img.PSNR(imgRef, 255));
-	img.display();
+	// Save the image to the output file
+	img.save(argv[2]);
 
 	return 0;
 }

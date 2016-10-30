@@ -401,15 +401,15 @@ void idct8(s16 *tb, u8 width, u8 height, u8 stride)
 
 s16 coeffCast(s32 val)
 {
-	return ((val < -32768) ? -32768 : ((val > 32767) ? 32767 : val));
+	return (s16)((val < -32768) ? -32768 : ((val > 32767) ? 32767 : val));
 }
 
 s16 pixelCast(s32 val)
 {
-	return ((val < 0) ? 0 : ((val > 255) ? 255 : val));
+	return (s16)((val < 0) ? 0 : ((val > 255) ? 255 : val));
 }
 
 s16 residualCast(s32 val)
 {
-	return ((val < -255) ? -255 : ((val > 255) ? 255 : val));
+	return (s16)((val < -255) ? -255 : ((val > 255) ? 255 : val));
 }

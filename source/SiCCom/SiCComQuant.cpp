@@ -7,18 +7,18 @@ void quantConst(stuStruct &stu, u16 qp)
 	{
 		for (u8 x = 0; x < stu.hscu->width; x++)
 		{
-			stu.hscu->scbLuma[stu.hscu->stride * y + x] = (s16)((float)stu.hscu->scbLuma[stu.hscu->stride * y + x] / qp + 0.5);
-			stu.hscu->scbChroma1[stu.hscu->stride * y + x] = (s16)((float)stu.hscu->scbChroma1[stu.hscu->stride * y + x] / qp + 0.5);
-			stu.hscu->scbChroma2[stu.hscu->stride * y + x] = (s16)((float)stu.hscu->scbChroma2[stu.hscu->stride * y + x] / qp + 0.5);
+			stu.hscu->scbLuma[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbLuma[stu.hscu->stride * y + x] / qp + 0.5);
+			stu.hscu->scbChroma1[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma1[stu.hscu->stride * y + x] / qp + 0.5);
+			stu.hscu->scbChroma2[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma2[stu.hscu->stride * y + x] / qp + 0.5);
 		}
 	}
 	for (u8 y = 0; y < stu.vscu->height; y++)
 	{
 		for (u8 x = 0; x < stu.vscu->width; x++)
 		{
-			stu.vscu->scbLuma[stu.vscu->stride * y + x] = (s16)((float)stu.vscu->scbLuma[stu.vscu->stride * y + x] / qp + 0.5);
-			stu.vscu->scbChroma1[stu.vscu->stride * y + x] = (s16)((float)stu.vscu->scbChroma1[stu.vscu->stride * y + x] / qp + 0.5);
-			stu.vscu->scbChroma2[stu.vscu->stride * y + x] = (s16)((float)stu.vscu->scbChroma2[stu.vscu->stride * y + x] / qp + 0.5);
+			stu.vscu->scbLuma[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbLuma[stu.vscu->stride * y + x] / qp + 0.5);
+			stu.vscu->scbChroma1[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma1[stu.vscu->stride * y + x] / qp + 0.5);
+			stu.vscu->scbChroma2[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma2[stu.vscu->stride * y + x] / qp + 0.5);
 		}
 	}
 }
@@ -34,9 +34,9 @@ void quantConst(rtuStruct &rtu, u16 qp)
 #endif
 		for (u8 x = 0; x < rtu.width; x++)
 		{
-			rtu.rtbLuma[rtu.stride * y + x] = coeffCast((float)rtu.rtbLuma[rtu.stride * y + x] / qp + 0.5);
-			rtu.rtbChroma1[rtu.stride * y + x] = coeffCast((float)rtu.rtbChroma1[rtu.stride * y + x] / qp + 0.5);
-			rtu.rtbChroma2[rtu.stride * y + x] = coeffCast((float)rtu.rtbChroma2[rtu.stride * y + x] / qp + 0.5);
+			rtu.rtbLuma[rtu.stride * y + x] = coeffCast((double)rtu.rtbLuma[rtu.stride * y + x] / qp + 0.5);
+			rtu.rtbChroma1[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma1[rtu.stride * y + x] / qp + 0.5);
+			rtu.rtbChroma2[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma2[rtu.stride * y + x] / qp + 0.5);
 
 #if !USE_8x8_RTB
 			if (x % 8 == 7)
@@ -53,18 +53,18 @@ void dequantConst(stuStruct &stu, u16 qp)
 	{
 		for (u8 x = 0; x < stu.hscu->width; x++)
 		{
-			stu.hscu->scbLuma[stu.hscu->stride * y + x] = (s16)((float)stu.hscu->scbLuma[stu.hscu->stride * y + x] * qp + 0.5);
-			stu.hscu->scbChroma1[stu.hscu->stride * y + x] = (s16)((float)stu.hscu->scbChroma1[stu.hscu->stride * y + x] * qp + 0.5);
-			stu.hscu->scbChroma2[stu.hscu->stride * y + x] = (s16)((float)stu.hscu->scbChroma2[stu.hscu->stride * y + x] * qp + 0.5);
+			stu.hscu->scbLuma[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbLuma[stu.hscu->stride * y + x] * qp + 0.5);
+			stu.hscu->scbChroma1[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma1[stu.hscu->stride * y + x] * qp + 0.5);
+			stu.hscu->scbChroma2[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma2[stu.hscu->stride * y + x] * qp + 0.5);
 		}
 	}
 	for (u8 y = 0; y < stu.vscu->height; y++)
 	{
 		for (u8 x = 0; x < stu.vscu->width; x++)
 		{
-			stu.vscu->scbLuma[stu.vscu->stride * y + x] = (s16)((float)stu.vscu->scbLuma[stu.vscu->stride * y + x] * qp + 0.5);
-			stu.vscu->scbChroma1[stu.vscu->stride * y + x] = (s16)((float)stu.vscu->scbChroma1[stu.vscu->stride * y + x] * qp + 0.5);
-			stu.vscu->scbChroma2[stu.vscu->stride * y + x] = (s16)((float)stu.vscu->scbChroma2[stu.vscu->stride * y + x] * qp + 0.5);
+			stu.vscu->scbLuma[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbLuma[stu.vscu->stride * y + x] * qp + 0.5);
+			stu.vscu->scbChroma1[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma1[stu.vscu->stride * y + x] * qp + 0.5);
+			stu.vscu->scbChroma2[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma2[stu.vscu->stride * y + x] * qp + 0.5);
 		}
 	}
 }
@@ -81,9 +81,9 @@ void dequantConst(rtuStruct &rtu, u16 qp)
 #endif
 		for (u8 x = 0; x < rtu.width; x++)
 		{
-			rtu.rtbLuma[rtu.stride * y + x] = coeffCast((float)rtu.rtbLuma[rtu.stride * y + x] * qp + 0.5);
-			rtu.rtbChroma1[rtu.stride * y + x] = coeffCast((float)rtu.rtbChroma1[rtu.stride * y + x] * qp + 0.5);
-			rtu.rtbChroma2[rtu.stride * y + x] = coeffCast((float)rtu.rtbChroma2[rtu.stride * y + x] * qp + 0.5);
+			rtu.rtbLuma[rtu.stride * y + x] = coeffCast((double)rtu.rtbLuma[rtu.stride * y + x] * qp + 0.5);
+			rtu.rtbChroma1[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma1[rtu.stride * y + x] * qp + 0.5);
+			rtu.rtbChroma2[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma2[rtu.stride * y + x] * qp + 0.5);
 
 #if !USE_8x8_RTB
 			if (x % 8 == 7)
@@ -93,7 +93,7 @@ void dequantConst(rtuStruct &rtu, u16 qp)
 	}
 }
 
-s16 coeffCast(float val)
+s16 coeffCast(double val)
 {
-	return ((val < -32768) ? -32768 : ((val > 32767) ? 32767 : val));
+	return (s16)((val < -32768) ? -32768 : ((val > 32767) ? 32767 : val));
 }

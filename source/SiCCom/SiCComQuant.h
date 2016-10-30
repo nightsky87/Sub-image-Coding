@@ -9,6 +9,6 @@ void quantConst(rtuStruct &rtu, u16 qp);
 void dequantConst(stuStruct &stu, u16 qp);
 void dequantConst(rtuStruct &rtu, u16 qp);
 
-s16 coeffCast(float val);
+s16 coeffCast(double val);
 
 #endif
