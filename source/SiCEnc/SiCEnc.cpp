@@ -11,7 +11,6 @@ int main()
 {
 	// Load a test image
 	CImg<s16> img("../../../../images/Misc/lena_std.bmp");
-	CImg<s16> imgRef = img;
 
 	// Determine the original dimensions
 	u16 trueWidth = img.width();
@@ -31,29 +30,37 @@ int main()
 
 	// Manually define the parameters for now
 	paramStruct param;
-	param.q1 = 1;
+	param.q1 = 128;
 	param.q2 = param.q1;
 	param.chromaSub = CHROMA_400;
 
-	// Validate the chroma subsampling settings
-	if (channels == 1 && param.chromaSub != CHROMA_400)
+	// Automatically detect grayscale images
+	if (channels == 1)
+		param.chromaSub == CHROMA_400;
+
+	if (param.chromaSub == CHROMA_444)
 	{
-		printf("Expected an RGB input image as input.\n");
+		printf("Error: Chroma prediction not yet implemented\n");
 		return -1;
 	}
 
 	// Apply the Rec. 601 YCbCr transform
 	const u32 chOffset = width * height;
-	for (u32 i = 0; i < chOffset; i++)
+	if (channels == 3)
 	{
-		double y = round(0.299 * (double)img(i) + 0.587 * (double)img(i + chOffset) + 0.114 * (double)img(i + 2 * chOffset));
-		double cb = round(128 - 0.168736 * (double)img(i) - 0.331264 * (double)img(i + chOffset) + 0.5 * (double)img(i + 2 * chOffset));
-		double cr = round(128 + 0.5 * (double)img(i) - 0.418688 * (double)img(i + chOffset) - 0.081312 * (double)img(i + 2 * chOffset));
+		for (u32 i = 0; i < chOffset; i++)
+		{
+			double y = round(0.299 * (double)img(i) + 0.587 * (double)img(i + chOffset) + 0.114 * (double)img(i + 2 * chOffset));
+			double cb = round(128 - 0.168736 * (double)img(i) - 0.331264 * (double)img(i + chOffset) + 0.5 * (double)img(i + 2 * chOffset));
+			double cr = round(128 + 0.5 * (double)img(i) - 0.418688 * (double)img(i + chOffset) - 0.081312 * (double)img(i + 2 * chOffset));
 
-		img(i) = (s16)((y < 0) ? 0 : ((y > 255) ? 255 : y));
-		img(i + chOffset) = (s16)((cb < 0) ? 0 : ((cb > 255) ? 255 : cb));
-		img(i + 2 * chOffset) = (s16)((cr < 0) ? 0 : ((cr > 255) ? 255 : cr));
+			img(i) = (s16)((y < 0) ? 0 : ((y > 255) ? 255 : y));
+			img(i + chOffset) = (s16)((cb < 0) ? 0 : ((cb > 255) ? 255 : cb));
+			img(i + 2 * chOffset) = (s16)((cr < 0) ? 0 : ((cr > 255) ? 255 : cr));
+		}
 	}
+
+	CImg<s16> imgRef = img.channel(0);
 
 	// Initialize the arithmetic encoder with 8 bpp for grayscale images or 24 bpp for color images
 	if (param.chromaSub == CHROMA_400)
@@ -66,10 +73,33 @@ int main()
 	{
 		for (u16 x = 0; x < width; x += CU_SIZE)
 		{
-			SiCEncCU(&img(x, y, 1, 1), width, height, param);
+			SiCEncCU(&img(x, y), width, height, param);
 		}
 	}
 
+	// Apply the JPEG YCbCr forward transform
+	if (channels == 3)
+	{
+		if (param.chromaSub == CHROMA_400)
+		{
+			img = img.channel(0);
+		}
+		else
+		{
+			for (u32 i = 0; i < chOffset; i++)
+			{
+				double r = round((double)img(i) + 1.402 * (double)(img(i + 2 * chOffset) - 128));
+				double g = round((double)img(i) - 0.344136 * (double)(img(i + chOffset) - 128) - 0.714136 * (double)(img(i + 2 * chOffset) - 128));
+				double b = round((double)img(i) + 1.772 * (double)(img(i + chOffset) - 128));
+
+				img(i) = (s16)((r < 0) ? 0 : ((r > 255) ? 255 : r));
+				img(i + chOffset) = (s16)((g < 0) ? 0 : ((g > 255) ? 255 : g));
+				img(i + 2 * chOffset) = (s16)((b < 0) ? 0 : ((b > 255) ? 255 : b));
+			}
+		}
+	}
+
+	printf("%.4f\n", img.PSNR(imgRef, 255));
 	img.display();
 
 	//// Terminate the encoding process and write to file

@@ -1,13 +1,13 @@
 #include "SiCComBAC.h"
 #include <cstdio>
 
-void stuEnc(stuStruct stu)
+void stuEnc(stuStruct &stu, ChromaSub chromaSub)
 {
-	vstbEnc(stu.vscu);
-	hstbEnc(stu.hscu);
+	hstbEnc(stu.hscu, chromaSub);
+	vstbEnc(stu.vscu, chromaSub);
 }
 
-void vstbEnc(scuStruct *scu)
+void vstbEnc(scuStruct *scu, ChromaSub chromaSub)
 {
 	// Process the top row of luma STBs
 	stbEnc(&scu->scbLuma[0], COMPONENT_LUMA, SCAN_VERT);
@@ -38,10 +38,18 @@ void vstbEnc(scuStruct *scu)
 		}
 	}
 
+	// Bypass chroma coding if grayscale
+	if (chromaSub == CHROMA_400)
+		return;
+
+	// Determine the width and height of the chroma STBs
+	u8 width = (chromaSub == CHROMA_444) ? CU_SIZE : (CU_SIZE / 2);
+	u8 height = (chromaSub == CHROMA_444) ? (CU_SIZE / 8) : (CU_SIZE / 16);
+
 	// Process the top row of chroma STBs
 	stbEnc(&scu->scbChroma1[0], COMPONENT_CHROMA, SCAN_VERT);
 	stbEnc(&scu->scbChroma2[0], COMPONENT_CHROMA, SCAN_VERT);
-	for (u8 x = 4; x < CU_SIZE / 2; x += 4)
+	for (u8 x = 4; x < width; x += 4)
 	{
 		s16 dcVal = scu->scbChroma1[x];
 		scu->scbChroma1[x] = dcVal - scu->scbChroma1[x - 4];
@@ -54,52 +62,50 @@ void vstbEnc(scuStruct *scu)
 		scu->scbChroma2[x] = dcVal;
 	}
 
-#if CU_SIZE > 64
 	// Process the remaining rows of the chroma STBs
-	for (u8 y = 4; y < CU_SIZE / 16; y += 4)
+	for (u8 y = 4; y < height; y += 4)
 	{
 		// Process the leftmost chroma STB
-		s16 dcVal = scu->scbChroma1[CU_SIZE / 2 * y];
-		scu->scbChroma1[CU_SIZE / 2 * y] = dcVal - scu->scbChroma1[CU_SIZE / 2 * (y - 4)];
-		stbEnc(&scu->scbChroma1[CU_SIZE / 2 * y], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma1[CU_SIZE / 2 * y] = dcVal;
+		s16 dcVal = scu->scbChroma1[CU_SIZE * y];
+		scu->scbChroma1[CU_SIZE * y] = dcVal - scu->scbChroma1[CU_SIZE * (y - 4)];
+		stbEnc(&scu->scbChroma1[CU_SIZE * y], COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma1[CU_SIZE * y] = dcVal;
 
-		dcVal = scu->scbChroma2[CU_SIZE / 2 * y];
-		scu->scbChroma2[CU_SIZE / 2 * y] = dcVal - scu->scbChroma2[CU_SIZE / 2 * (y - 4)];
-		stbEnc(&scu->scbChroma2[CU_SIZE / 2 * y], COMPONENT_CHROMA, SCAN_VERT);
-		scu->scbChroma2[CU_SIZE / 2 * y] = dcVal;
+		dcVal = scu->scbChroma2[CU_SIZE * y];
+		scu->scbChroma2[CU_SIZE * y] = dcVal - scu->scbChroma2[CU_SIZE * (y - 4)];
+		stbEnc(&scu->scbChroma2[CU_SIZE * y], COMPONENT_CHROMA, SCAN_VERT);
+		scu->scbChroma2[CU_SIZE * y] = dcVal;
 
 		// Process the remaining chroma STBs
-		for (u8 x = 4; x < CU_SIZE; x += 4)
+		for (u8 x = 4; x < width; x += 4)
 		{
-			s16 dcVal = scu->scbChroma1[CU_SIZE / 2 * y + x];
-			scu->scbChroma1[CU_SIZE / 2 * y + x] = dcVal - scu->scbChroma1[CU_SIZE / 2 * y + x - 4];
-			stbEnc(&scu->scbChroma1[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, SCAN_VERT);
-			scu->scbChroma1[CU_SIZE / 2 * y + x] = dcVal;
+			s16 dcVal = scu->scbChroma1[CU_SIZE * y + x];
+			scu->scbChroma1[CU_SIZE * y + x] = dcVal - scu->scbChroma1[CU_SIZE * y + x - 4];
+			stbEnc(&scu->scbChroma1[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_VERT);
+			scu->scbChroma1[CU_SIZE * y + x] = dcVal;
 
-			dcVal = scu->scbChroma2[CU_SIZE / 2 * y + x];
-			scu->scbChroma2[CU_SIZE / 2 * y + x] = dcVal - scu->scbChroma2[CU_SIZE / 2 * y + x - 4];
-			stbEnc(&scu->scbChroma2[CU_SIZE / 2 * y + x], COMPONENT_CHROMA, SCAN_VERT);
-			scu->scbChroma2[CU_SIZE / 2 * y + x] = dcVal;
+			dcVal = scu->scbChroma2[CU_SIZE * y + x];
+			scu->scbChroma2[CU_SIZE * y + x] = dcVal - scu->scbChroma2[CU_SIZE * y + x - 4];
+			stbEnc(&scu->scbChroma2[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_VERT);
+			scu->scbChroma2[CU_SIZE * y + x] = dcVal;
 		}
 	}
-#endif
 }
 
-void hstbEnc(scuStruct *scu)
+void hstbEnc(scuStruct *scu, ChromaSub chromaSub)
 {
 	// Process the left column of luma STBs
 	stbEnc(&scu->scbLuma[0], COMPONENT_LUMA, SCAN_HORZ);
 	for (u8 y = 4; y < CU_SIZE; y += 4)
 	{
-		s16 dcVal = scu->scbLuma[CU_SIZE / 8 * y];
-		scu->scbLuma[CU_SIZE / 8 * y] = dcVal - scu->scbLuma[CU_SIZE / 8 * (y - 4)];
-		stbEnc(&scu->scbLuma[CU_SIZE / 8 * y], COMPONENT_LUMA, SCAN_HORZ);
-		scu->scbLuma[CU_SIZE / 8 * y] = dcVal;
+		s16 dcVal = scu->scbLuma[CU_SIZE * y];
+		scu->scbLuma[CU_SIZE * y] = dcVal - scu->scbLuma[CU_SIZE * (y - 4)];
+		stbEnc(&scu->scbLuma[CU_SIZE * y], COMPONENT_LUMA, SCAN_HORZ);
+		scu->scbLuma[CU_SIZE * y] = dcVal;
 	}
 
 	// Process the remaining columns of luma STBs
-	for (u8 x = 4; x < CU_SIZE / 8; x += 4)
+	for (u8 x = 4; x < CU_SIZE; x += 4)
 	{
 		// Process the top luma STB
 		s16 dcVal = scu->scbLuma[x];
@@ -110,32 +116,39 @@ void hstbEnc(scuStruct *scu)
 		// Process the remaining luma STBs
 		for (u8 y = 4; y < CU_SIZE; y += 4)
 		{
-			s16 dcVal = scu->scbLuma[CU_SIZE / 8 * y + x];
-			scu->scbLuma[CU_SIZE / 8 * y + x] = dcVal - scu->scbLuma[CU_SIZE / 8 * (y - 4) + x];
-			stbEnc(&scu->scbLuma[CU_SIZE / 8 * y + x], COMPONENT_LUMA, SCAN_HORZ);
-			scu->scbLuma[CU_SIZE / 8 * y + x] = dcVal;
+			s16 dcVal = scu->scbLuma[CU_SIZE * y + x];
+			scu->scbLuma[CU_SIZE * y + x] = dcVal - scu->scbLuma[CU_SIZE * (y - 4) + x];
+			stbEnc(&scu->scbLuma[CU_SIZE * y + x], COMPONENT_LUMA, SCAN_HORZ);
+			scu->scbLuma[CU_SIZE * y + x] = dcVal;
 		}
 	}
+
+	// Bypass chroma coding if grayscale
+	if (chromaSub == CHROMA_400)
+		return;
+
+	// Determine the width and height of the chroma STBs
+	u8 width = (chromaSub == CHROMA_444) ? (CU_SIZE / 8) : (CU_SIZE / 16);
+	u8 height = (chromaSub == CHROMA_444) ? CU_SIZE : (CU_SIZE / 2);
 
 	// Process the left column of chroma STBs
 	stbEnc(&scu->scbChroma1[0], COMPONENT_CHROMA, SCAN_HORZ);
 	stbEnc(&scu->scbChroma2[0], COMPONENT_CHROMA, SCAN_HORZ);
-	for (u8 y = 4; y < CU_SIZE / 2; y += 4)
+	for (u8 y = 4; y < height; y += 4)
 	{
-		s16 dcVal = scu->scbChroma1[CU_SIZE / 16 * y];
-		scu->scbChroma1[CU_SIZE / 16 * y] = dcVal - scu->scbChroma1[CU_SIZE / 16 * (y - 4)];
-		stbEnc(&scu->scbChroma1[CU_SIZE / 16 * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma1[CU_SIZE / 16 * y] = dcVal;
+		s16 dcVal = scu->scbChroma1[CU_SIZE * y];
+		scu->scbChroma1[CU_SIZE * y] = dcVal - scu->scbChroma1[CU_SIZE * (y - 4)];
+		stbEnc(&scu->scbChroma1[CU_SIZE * y], COMPONENT_CHROMA, SCAN_HORZ);
+		scu->scbChroma1[CU_SIZE * y] = dcVal;
 
-		dcVal = scu->scbChroma2[CU_SIZE / 16 * y];
-		scu->scbChroma2[CU_SIZE / 16 * y] = dcVal - scu->scbChroma2[CU_SIZE / 16 * (y - 4)];
-		stbEnc(&scu->scbChroma2[CU_SIZE / 16 * y], COMPONENT_CHROMA, SCAN_HORZ);
-		scu->scbChroma2[CU_SIZE / 16 * y] = dcVal;
+		dcVal = scu->scbChroma2[CU_SIZE * y];
+		scu->scbChroma2[CU_SIZE * y] = dcVal - scu->scbChroma2[CU_SIZE * (y - 4)];
+		stbEnc(&scu->scbChroma2[CU_SIZE * y], COMPONENT_CHROMA, SCAN_HORZ);
+		scu->scbChroma2[CU_SIZE * y] = dcVal;
 	}
 
-#if CU_SIZE > 64
 	// Process the remaining columns of the chroma STBs
-	for (u8 x = 4; x < CU_SIZE / 16; x += 4)
+	for (u8 x = 4; x < width; x += 4)
 	{
 		// Process the top chroma STB
 		s16 dcVal = scu->scbChroma1[x];
@@ -149,28 +162,26 @@ void hstbEnc(scuStruct *scu)
 		scu->scbChroma2[x] = dcVal;
 
 		// Process the remaining chroma STBs
-		for (u8 y = 4; y < CU_SIZE; y += 4)
+		for (u8 y = 4; y < height; y += 4)
 		{
-			s16 dcVal = scu->scbChroma1[CU_SIZE / 16 * y + x];
-			scu->scbChroma1[CU_SIZE / 16 * y + x] = dcVal - scu->scbChroma1[CU_SIZE / 16 * (y - 4) + x];
-			stbEnc(&scu->scbChroma1[CU_SIZE / 16 * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma1[CU_SIZE / 16 * y + x] = dcVal;
+			s16 dcVal = scu->scbChroma1[CU_SIZE * y + x];
+			scu->scbChroma1[CU_SIZE * y + x] = dcVal - scu->scbChroma1[CU_SIZE * (y - 4) + x];
+			stbEnc(&scu->scbChroma1[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_HORZ);
+			scu->scbChroma1[CU_SIZE * y + x] = dcVal;
 
-			dcVal = scu->scbChroma2[CU_SIZE / 16 * y + x];
-			scu->scbChroma2[CU_SIZE / 16 * y + x] = dcVal - scu->scbChroma2[CU_SIZE / 16 * (y - 4) + x];
-			stbEnc(&scu->scbChroma2[CU_SIZE / 16 * y + x], COMPONENT_CHROMA, SCAN_HORZ);
-			scu->scbChroma2[CU_SIZE / 16 * y + x] = dcVal;
+			dcVal = scu->scbChroma2[CU_SIZE * y + x];
+			scu->scbChroma2[CU_SIZE * y + x] = dcVal - scu->scbChroma2[CU_SIZE * (y - 4) + x];
+			stbEnc(&scu->scbChroma2[CU_SIZE * y + x], COMPONENT_CHROMA, SCAN_HORZ);
+			scu->scbChroma2[CU_SIZE * y + x] = dcVal;
 		}
 	}
-#endif
 }
 
-void stbEnc(s16 *stb, component comp, scanDir dir)
+void stbEnc(s16 *stb, Component comp, ScanDir dir)
 {
 	// Define the context offsets
 	const u8 dirBase = (dir == SCAN_HORZ) ? CTX_HSTB_BASE : CTX_VSTB_BASE;
 	const u8 ctxBase = (comp == COMPONENT_LUMA) ? (dirBase + CTX_STB_LUMA_OFFSET) : (dirBase + CTX_STB_CHROMA_OFFSET);
-	const u8 stride = (dir == SCAN_HORZ) ? ((comp == COMPONENT_LUMA) ? (CU_SIZE / 8) : (CU_SIZE / 16)) : ((comp == COMPONENT_LUMA) ? CU_SIZE : (CU_SIZE / 2));
 
 	// Create an ordered copy of the STB
 	static s16 stbOrd[16];
@@ -178,7 +189,7 @@ void stbEnc(s16 *stb, component comp, scanDir dir)
 	{
 		for (u8 y = 0; y < 4; y++)
 		{
-			memcpy(&stbOrd[4 * y], &stb[stride * y], 4 * sizeof(s16));
+			memcpy(&stbOrd[4 * y], &stb[CU_SIZE * y], 4 * sizeof(s16));
 		}
 	}
 	else
@@ -187,7 +198,7 @@ void stbEnc(s16 *stb, component comp, scanDir dir)
 		{
 			for (u8 y = 0; y < 4; y++)
 			{
-				stbOrd[4 * x + y] = stb[stride * y + x];
+				stbOrd[4 * x + y] = stb[CU_SIZE * y + x];
 			}
 		}
 	}
@@ -579,7 +590,7 @@ void rtuEnc(rtuStruct rtu)
 	}
 }
 
-void rtbEnc(s16 *rtb, component comp, scanDir dir)
+void rtbEnc(s16 *rtb, Component comp, ScanDir dir)
 {
 	// Define the context offsets
 	const u8 stride = (comp == COMPONENT_LUMA) ? CU_SIZE : (CU_SIZE / 2);
@@ -859,7 +870,7 @@ void hstbDec(scuStruct *scu)
 #endif
 }
 
-void stbDec(s16 *stb, component comp, scanDir dir)
+void stbDec(s16 *stb, Component comp, ScanDir dir)
 {
 	// Define the context offsets
 	const u8 dirBase = (dir == SCAN_HORZ) ? CTX_HSTB_BASE : CTX_VSTB_BASE;
@@ -1243,7 +1254,7 @@ void rtuDec(rtuStruct rtu)
 	}
 }
 
-void rtbDec(s16 *rtb, component comp, scanDir dir)
+void rtbDec(s16 *rtb, Component comp, ScanDir dir)
 {
 	// Define the context offsets
 	const u8 stride = (comp == COMPONENT_LUMA) ? CU_SIZE : (CU_SIZE / 2);

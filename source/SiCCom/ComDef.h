@@ -2,7 +2,7 @@
 #define COMDEF_H
 
 #define CU_SIZE 64
-#define USE_8x8_RTB
+#define USE_8x8_RTB 1
 
 typedef unsigned char	u8;
 typedef unsigned short	u16;
@@ -38,49 +38,73 @@ enum PredType
 	TYPE_BILINEAR
 };
 
-typedef struct
+struct paramStruct
 {
 	u16 q1;
 	u16 q2;
 	ChromaSub chromaSub;
-} paramStruct;
+};
 
-typedef struct
+struct cuStruct
 {
 	s16 *cbLuma;
 	s16 *cbChroma1;
 	s16 *cbChroma2;
-} cuStruct;
 
-typedef struct
+	cuStruct& operator-(cuStruct &rhs)
+	{
+		for (u16 i = 0; i < CU_SIZE * CU_SIZE; i++)
+		{
+			this->cbLuma[i] -= rhs.cbLuma[i];
+			this->cbChroma1[i] -= rhs.cbChroma1[i];
+			this->cbChroma2[i] -= rhs.cbChroma2[i];
+		}
+
+		return *this;
+	}
+
+	cuStruct& operator+(cuStruct &rhs)
+	{
+		for (u16 i = 0; i < CU_SIZE * CU_SIZE; i++)
+		{
+			this->cbLuma[i] += rhs.cbLuma[i];
+			this->cbChroma1[i] += rhs.cbChroma1[i];
+			this->cbChroma2[i] += rhs.cbChroma2[i];
+		}
+
+		return *this;
+	}
+};
+
+struct scuStruct
 {
 	s16 *scbLuma;
 	s16 *scbChroma1;
 	s16 *scbChroma2;
-} scuStruct;
+};
 
-typedef struct 
+struct stuStruct
 {
 	scuStruct *vscu;
 	scuStruct *hscu;
-} stuStruct;
+};
 
-typedef struct 
+struct puStruct
 {
 	cuStruct *cu;
 	u8 *modeLuma;
 	u8 *modeChroma;
 	ScanDir *scanLuma;
 	ScanDir *scanChroma;
-} puStruct;
+};
 
-typedef struct 
+struct rtuStruct
 {
 	s16 *rtbLuma;
 	s16 *rtbChroma1;
 	s16 *rtbChroma2;
 	ScanDir *scanLuma;
 	ScanDir *scanChroma;
-} rtuStruct;
+};
 
 #endif
