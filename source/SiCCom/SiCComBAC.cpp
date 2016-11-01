@@ -1,6 +1,8 @@
 #include "SiCComBAC.h"
 #include <cstdio>
 
+static u32 lastSigHist[64];
+
 void stuEnc(stuStruct &stu)
 {
 	hstbEnc(stu.hscu);
@@ -9,30 +11,30 @@ void stuEnc(stuStruct &stu)
 
 void hstbEnc(scuStruct *scu)
 {
-	// Process the left column of luma STBs
+	// Process the luma STBs
 	stbEnc(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
-	for (u8 y = 4; y < scu->height; y += 4)
+	for (u8 y = 8; y < scu->height; y += 8)
 	{
 		s16 dcVal = scu->scbLuma[scu->stride * y];
-		scu->scbLuma[scu->stride * y] = dcVal - scu->scbLuma[scu->stride * (y - 4)];
+		scu->scbLuma[scu->stride * y] = dcVal - scu->scbLuma[scu->stride * (y - 8)];
 		stbEnc(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
 		scu->scbLuma[scu->stride * y] = dcVal;
 	}
 
 	// Process the remaining columns of luma STBs
-	for (u8 x = 4; x < scu->width; x += 4)
+	for (u8 x = 8; x < scu->width; x += 8)
 	{
 		// Process the top luma STB
 		s16 dcVal = scu->scbLuma[x];
-		scu->scbLuma[x] = dcVal - scu->scbLuma[x - 4];
+		scu->scbLuma[x] = dcVal - scu->scbLuma[x - 8];
 		stbEnc(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
 		scu->scbLuma[x] = dcVal;
 
 		// Process the remaining luma STBs
-		for (u8 y = 4; y < scu->height; y += 4)
+		for (u8 y = 8; y < scu->height; y += 8)
 		{
 			s16 dcVal = scu->scbLuma[scu->stride * y + x];
-			scu->scbLuma[scu->stride * y + x] = dcVal - scu->scbLuma[scu->stride * (y - 4) + x];
+			scu->scbLuma[scu->stride * y + x] = dcVal - scu->scbLuma[scu->stride * (y - 8) + x];
 			stbEnc(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
 			scu->scbLuma[scu->stride * y + x] = dcVal;
 		}
@@ -96,28 +98,28 @@ void vstbEnc(scuStruct *scu)
 {
 	// Process the top row of luma STBs
 	stbEnc(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_VERT);
-	for (u8 x = 4; x < scu->width; x += 4)
+	for (u8 x = 8; x < scu->width; x += 8)
 	{
 		s16 dcVal = scu->scbLuma[x];
-		scu->scbLuma[x] = dcVal - scu->scbLuma[x - 4];
+		scu->scbLuma[x] = dcVal - scu->scbLuma[x - 8];
 		stbEnc(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
 		scu->scbLuma[x] = dcVal;
 	}
 
 	// Process the remaining rows of luma STBs
-	for (u8 y = 4; y < scu->height; y += 4)
+	for (u8 y = 8; y < scu->height; y += 8)
 	{
 		// Process the leftmost luma STB
 		s16 dcVal = scu->scbLuma[scu->stride * y];
-		scu->scbLuma[scu->stride * y] = dcVal - scu->scbLuma[scu->stride * (y - 4)];
+		scu->scbLuma[scu->stride * y] = dcVal - scu->scbLuma[scu->stride * (y - 8)];
 		stbEnc(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_VERT);
 		scu->scbLuma[scu->stride * y] = dcVal;
 
 		// Process the remaining luma STBs
-		for (u8 x = 4; x < scu->width; x += 4)
+		for (u8 x = 8; x < scu->width; x += 8)
 		{
 			s16 dcVal = scu->scbLuma[scu->stride * y + x];
-			scu->scbLuma[scu->stride * y + x] = dcVal - scu->scbLuma[scu->stride * y + x - 4];
+			scu->scbLuma[scu->stride * y + x] = dcVal - scu->scbLuma[scu->stride * y + x - 8];
 			stbEnc(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
 			scu->scbLuma[scu->stride * y + x] = dcVal;
 		}
@@ -184,29 +186,31 @@ void stbEnc(s16 *stb, u8 stride, Component comp, ScanDir dir)
 	const u8 ctxBase = (comp == COMPONENT_LUMA) ? (dirBase + CTX_STB_LUMA_OFFSET) : (dirBase + CTX_STB_CHROMA_OFFSET);
 
 	// Create an ordered copy of the STB
-	static s16 stbOrd[16];
+	static s16 stbOrd[64];
 	if (dir == SCAN_HORZ)
 	{
-		for (u8 y = 0; y < 4; y++)
+		for (u8 y = 0; y < 8; y++)
 		{
-			memcpy(&stbOrd[4 * y], &stb[stride * y], 4 * sizeof(s16));
+			memcpy(&stbOrd[8 * y], &stb[stride * y], 8 * sizeof(s16));
 		}
 	}
 	else
 	{
-		for (u8 x = 0; x < 4; x++)
+		for (u8 x = 0; x < 8; x++)
 		{
-			for (u8 y = 0; y < 4; y++)
+			for (u8 y = 0; y < 8; y++)
 			{
-				stbOrd[4 * x + y] = stb[stride * y + x];
+				stbOrd[8 * x + y] = stb[stride * y + x];
 			}
 		}
 	}
 
 	// Determine the index of the last significant coefficient in the STB
-	s8 lastSig = 15;
+	s8 lastSig = 63;
 	while (stbOrd[lastSig] == 0 && lastSig >= 0)
 		lastSig--;
+
+	lastSigHist[lastSig]++;
 
 	// Bypass the block coding if no significant coefficients are found
 	if (lastSig < 0)
@@ -230,7 +234,7 @@ void stbEnc(s16 *stb, u8 stride, Component comp, ScanDir dir)
 
 	// Signal the significance map
 	u8 numSig = 0;
-	s16 coeffVal[16];
+	s16 coeffVal[64];
 	for (u8 i = 0; i <= lastSig; i++)
 	{
 		if (stbOrd[i] == 0)
@@ -764,24 +768,24 @@ void vstbDec(scuStruct *scu)
 {
 	// Process the top row of luma STBs
 	stbDec(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_VERT);
-	for (u8 x = 4; x < scu->width; x += 4)
+	for (u8 x = 8; x < scu->width; x += 8)
 	{
 		stbDec(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
-		scu->scbLuma[x] += scu->scbLuma[x - 4];
+		scu->scbLuma[x] += scu->scbLuma[x - 8];
 	}
 
 	// Process the remaining rows of luma STBs
-	for (u8 y = 4; y < scu->height; y += 4)
+	for (u8 y = 8; y < scu->height; y += 8)
 	{
 		// Process the leftmost luma STB
 		stbDec(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_VERT);
-		scu->scbLuma[scu->stride * y] += scu->scbLuma[scu->stride * (y - 4)];
+		scu->scbLuma[scu->stride * y] += scu->scbLuma[scu->stride * (y - 8)];
 
 		// Process the remaining luma STBs
-		for (u8 x = 4; x < scu->width; x += 4)
+		for (u8 x = 8; x < scu->width; x += 8)
 		{
 			stbDec(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_VERT);
-			scu->scbLuma[scu->stride * y + x] += scu->scbLuma[scu->stride * y + x - 4];
+			scu->scbLuma[scu->stride * y + x] += scu->scbLuma[scu->stride * y + x - 8];
 		}
 	}
 
@@ -831,24 +835,24 @@ void hstbDec(scuStruct *scu)
 {
 	// Process the left column of luma STBs
 	stbDec(&scu->scbLuma[0], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
-	for (u8 y = 4; y < scu->height; y += 4)
+	for (u8 y = 8; y < scu->height; y += 8)
 	{
 		stbDec(&scu->scbLuma[scu->stride * y], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
-		scu->scbLuma[scu->stride * y] += scu->scbLuma[scu->stride * (y - 4)];
+		scu->scbLuma[scu->stride * y] += scu->scbLuma[scu->stride * (y - 8)];
 	}
 
 	// Process the remaining columns of luma STBs
-	for (u8 x = 4; x < scu->width; x += 4)
+	for (u8 x = 8; x < scu->width; x += 8)
 	{
 		// Process the top luma STB
 		stbDec(&scu->scbLuma[x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
-		scu->scbLuma[x] += scu->scbLuma[x - 4];
+		scu->scbLuma[x] += scu->scbLuma[x - 8];
 
 		// Process the remaining luma STBs
-		for (u8 y = 4; y < scu->height; y += 4)
+		for (u8 y = 8; y < scu->height; y += 8)
 		{
 			stbDec(&scu->scbLuma[scu->stride * y + x], scu->stride, COMPONENT_LUMA, SCAN_HORZ);
-			scu->scbLuma[scu->stride * y + x] += scu->scbLuma[scu->stride * (y - 4) + x];
+			scu->scbLuma[scu->stride * y + x] += scu->scbLuma[scu->stride * (y - 8) + x];
 		}
 	}
 
@@ -914,8 +918,8 @@ void stbDec(s16 *stb, u8 stride, Component comp, ScanDir dir)
 
 	// Decode the significance map
 	u8 numSig = 0;
-	s16 sigMap[16];
-	memset(sigMap, 0, 16 * sizeof(s16));
+	s16 sigMap[64];
+	memset(sigMap, 0, 64 * sizeof(s16));
 	for (u8 i = 0; i <= lastSig; i++)
 	{
 		sigMap[i] = DecodeDecision(ctxBase + CTX_STB_SIG_FLAG_OFFSET + i);
@@ -925,7 +929,7 @@ void stbDec(s16 *stb, u8 stride, Component comp, ScanDir dir)
 	}
 
 	// Check if the absolute coefficient is greater than 1
-	s16 coeffVal[16];
+	s16 coeffVal[64];
 	for (u8 i = 0; i < numSig; i++)
 	{
 		if (!DecodeDecision(ctxBase + CTX_STB_ABS_COEFF_GREATER_1_OFFSET))
@@ -982,11 +986,11 @@ void stbDec(s16 *stb, u8 stride, Component comp, ScanDir dir)
 	if (dir == SCAN_HORZ)
 	{
 		u8 ind = 0;
-		for (u8 y = 0; y < 4; y++)
+		for (u8 y = 0; y < 8; y++)
 		{
-			for (u8 x = 0; x < 4; x++)
+			for (u8 x = 0; x < 8; x++)
 			{
-				if (sigMap[4 * y + x])
+				if (sigMap[8 * y + x])
 				{
 					stb[stride * y + x] = coeffVal[ind];
 					ind++;
@@ -997,11 +1001,11 @@ void stbDec(s16 *stb, u8 stride, Component comp, ScanDir dir)
 	else
 	{
 		u8 ind = 0;
-		for (u8 x = 0; x < 4; x++)
+		for (u8 x = 0; x < 8; x++)
 		{
-			for (u8 y = 0; y < 4; y++)
+			for (u8 y = 0; y < 8; y++)
 			{
-				if (sigMap[4 * x + y])
+				if (sigMap[8 * x + y])
 				{
 					stb[stride * y + x] = coeffVal[ind];
 					ind++;

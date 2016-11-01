@@ -38,7 +38,7 @@ void SiCDecCU(s16 *img, u16 width, u16 height, paramStruct param)
 	// Decode the sub-image transform units (STUs)
 	static stuStruct stu = { &vscu, &hscu, CU_SIZE, CU_SIZE, CU_SIZE, param.chromaSub };
 	stuDec(stu);
-	dequantConst(stu, param.q1);
+	dequantTable(stu, param.q1);
 
 	// Apply the inverse DCT to the sub-images
 	tuInverse(stu);

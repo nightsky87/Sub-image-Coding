@@ -4,25 +4,30 @@
 #include "ComDef.h"
 #include <cstring>
 
-void pred(puStruct &pu);
-void predLuma(puStruct &pu);
-void predChroma(puStruct &pu);
+#define PRED_MODE_NN 8
 
-void predSearch(puStruct &pu);
-void predSearchLuma(puStruct &pu);
-void predSearchChroma(puStruct &pu);
+void pred(cpStruct *cp);
+void predLuma(cpStruct *cp);
+void predChroma(cpStruct *cp);
+void predChroma(cpStruct *cp, cpStruct *cpDiff);
 
-void predSearchBlock(s16 *pb, u8 *mode, ScanDir *scan);
-void predSearchBlock(s16 *pbChroma1, s16 *pbChroma2, u8 *modeLuma, u8 *modeChroma, ScanDir *scan);
-void predBlock(s16 *pb, u8 mode);
-void predBlock(s16 *pb1, s16 *pb2, u8 *modeLuma, u8 modeChroma, ScanDir *scanChroma);
+void predBlock(s16 *pb, u8 stride, u8 mode);
 
-void predUPM(s16 *pb, u8 dir);
-void predLPM(s16 *pb, u8 dir);
-void predBPM(s16 *pb, u8 dir);
-void predDC(s16 *pb);
+void predDir(s16 *pb, u8 stride, u8 dir);
+void predNN(s16 *pb, u8 stride);
 
-u16 hadamardMetric(s16 *pbTrue, s16 *pbEst);
+void predSearch(cpStruct *cp);
+u8 predSearchBlock(s16 *pb, u8 stride, s16 *pbTrue, u8 strideTrue);
 
+u16 hadamardMetric(s16 *pb, u8 stride, s16 *pbTrue, u8 strideTrue);
+
+//void predSearchBlock(s16 *pb, u8 *mode, ScanDir *scan);
+//void predSearchBlock(s16 *pbChroma1, s16 *pbChroma2, u8 *modeLuma, u8 *modeChroma, ScanDir *scan);
+//void predBlock(s16 *pb, u8 mode);
+//void predBlock(s16 *pb1, s16 *pb2, u8 *modeLuma, u8 modeChroma, ScanDir *scanChroma);
+
+
+//u16 hadamardMetric(s16 *pbTrue, s16 *pbEst);
+//
 
 #endif

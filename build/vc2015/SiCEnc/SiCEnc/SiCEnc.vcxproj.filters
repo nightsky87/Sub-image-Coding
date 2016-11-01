@@ -21,48 +21,33 @@
     <ClInclude Include="..\..\..\..\source\SiCCom\ComDef.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComTU.h">
+    <ClInclude Include="..\..\..\..\source\SiCEnc\SICEncCU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComQuant.h">
+    <ClInclude Include="..\..\..\..\source\SICCom\SICComPred.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComPred.h">
+    <ClInclude Include="..\..\..\..\source\SICCom\SICComTransform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComBAC.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComBACCore.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCCom\SiCComBACContexts.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\source\SiCEnc\SiCEncCU.h">
+    <ClInclude Include="..\..\..\..\source\SICCom\SICComQuant.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\source\SiCEnc\SiCEnc.cpp">
+    <ClCompile Include="..\..\..\..\source\SiCEnc\SICEncCU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComTU.cpp">
+    <ClCompile Include="..\..\..\..\source\SiCEnc\SICEnc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComQuant.cpp">
+    <ClCompile Include="..\..\..\..\source\SICCom\SICComPred.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComPred.cpp">
+    <ClCompile Include="..\..\..\..\source\SICCom\SICComTransform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComBAC.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\source\SiCCom\SiCComBACCore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\source\SiCEnc\SiCEncCU.cpp">
+    <ClCompile Include="..\..\..\..\source\SICCom\SICComQuant.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

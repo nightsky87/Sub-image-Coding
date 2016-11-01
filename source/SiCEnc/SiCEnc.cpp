@@ -1,7 +1,7 @@
 #include "CImg.h"
 #include "ComDef.h"
-#include "SiCEncCU.h"
-#include "SiCComBACCore.h"
+#include "SICEncCU.h"
+//#include "SiCComBACCore.h"
 
 #include <cassert>
 
@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 	if (argc != 5)
 	{
 		printf("Usage:\n");
-		printf("  SiCEnc <input file> <output file> <CHROMA_420 | CHROMA_400> <quant>\n");
+		printf("  SiCEnc <input file> <output file> <440 | 420 | 400> <quant>\n");
 		printf("  Note: Only bitmaps are currently supported.\n");
 		return -1;
 	}
@@ -39,19 +39,12 @@ int main(int argc, char *argv[])
 
 	// Define the parameters
 	paramStruct param;
-	param.q1 = (u16)strtol(argv[4], NULL, 10);
-	param.q2 = param.q1;
-	param.chromaSub = strcmp(argv[3], "CHROMA_400") == 0 ? CHROMA_400 : CHROMA_420;
+	param.qp = (u16)strtol(argv[4], NULL, 10);
+	param.chromaSub = strcmp(argv[3], "400") == 0 ? CHROMA_400 : (strcmp(argv[3], "420") ? CHROMA_420 : CHROMA_444);
 
 	// Automatically detect grayscale images
 	if (channels == 1)
 		param.chromaSub = CHROMA_400;
-
-	if (param.chromaSub == CHROMA_444)
-	{
-		printf("Error: Chroma prediction not yet implemented\n");
-		return -1;
-	}
 
 	// Apply the Rec. 601 YCbCr transform
 	const u32 chOffset = width * height;
@@ -68,12 +61,13 @@ int main(int argc, char *argv[])
 			img(i + 2 * chOffset) = (s16)((cr < 0) ? 0 : ((cr > 255) ? 255 : cr));
 		}
 	}
+	CImg<s16> imgRef = img.get_channel(0);
 
-	// Initialize the arithmetic encoder with 8 bpp for grayscale images or 24 bpp for color images
-	if (param.chromaSub == CHROMA_400)
-		InitializeEncoder(8 * width * height);
-	else
-		InitializeEncoder(24 * width * height);
+	//// Initialize the arithmetic encoder with 8 bpp for grayscale images or 24 bpp for color images
+	//if (param.chromaSub == CHROMA_400)
+	//	InitializeEncoder(8 * width * height);
+	//else
+	//	InitializeEncoder(24 * width * height);
 
 	// Process each coding unit (CU)
 	for (u16 y = 0; y < height; y += CU_SIZE)
@@ -85,11 +79,19 @@ int main(int argc, char *argv[])
 	}
 
 	if (param.chromaSub == CHROMA_400)
+	{
 		channels = 1;
+		img.channel(0);
+	}
 
-	// Terminate the encoding process and write to file
-	EncodeTerminate();
-	WriteBitstream(argv[2], trueWidth, trueHeight, channels, param);
+	printf("%.4f\n", img.PSNR(imgRef, 255));
+	img.display();
+
+
+
+	//// Terminate the encoding process and write to file
+	//EncodeTerminate();
+	//WriteBitstream(argv[2], trueWidth, trueHeight, channels, param);
 
 	return 0;
 }

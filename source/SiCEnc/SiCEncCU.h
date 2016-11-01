@@ -2,17 +2,15 @@
 #define SIC_ENC_CU_H
 
 #include "ComDef.h"
-#include "SiCComTU.h"
-#include "SiCComQuant.h"
 #include "SiCComPred.h"
-#include "SiCComBAC.h"
+#include "SiCComTransform.h"
+#include "SiCComQuant.h"
+//#include "SiCComBAC.h"
 #include <cstring>
 
 void SiCEncCU(s16 *img, u16 width, u16 height, paramStruct param);
 
-void copyToCU(s16 *img, u16 width, u16 height, cuStruct &cu);
-void copyFromCU(s16 *img, u16 width, u16 height, cuStruct &cu);
-void copyToSCU(cuStruct &cu, scuStruct &hscu, scuStruct &vscu);
-void copyFromSCU(cuStruct &cu, scuStruct &hscu, scuStruct &vscu);
+void generateCP(s16 *img, u16 width, u16 height, cpStruct *cpLargest);
+void sliceFilt(cpStruct *cp, u8 preserve);
 
 #endif

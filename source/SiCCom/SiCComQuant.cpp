@@ -1,99 +1,76 @@
 #include "SiCComQuant.h"
+#include <cmath>
 
-void quantConst(stuStruct &stu, u16 qp)
+void quantConst(cpStruct *cp, u16 qp)
 {
-	// Quantize all coefficients of the STBs with the same factor
-	for (u8 y = 0; y < stu.hscu->height; y++)
+	// Calculate the scaling factor
+	double qStep = pow(2, ((double)qp - 4) / 6);
+
+	// Quantize all coefficients with the same factor
+	for (u8 y = 0; y < cp->height; y += 2)
 	{
-		for (u8 x = 0; x < stu.hscu->width; x++)
+		for (u8 x = 0; x < cp->width; x += 2)
 		{
-			stu.hscu->scbLuma[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbLuma[stu.hscu->stride * y + x] / qp + 0.5);
-			stu.hscu->scbChroma1[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma1[stu.hscu->stride * y + x] / qp + 0.5);
-			stu.hscu->scbChroma2[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma2[stu.hscu->stride * y + x] / qp + 0.5);
+			cp->pLuma[cp->width * y + x + 1] = (s16)round((double)cp->pLuma[cp->width * y + x + 1] / qStep);
+			cp->pLuma[cp->width * (y + 1) + x] = (s16)round((double)cp->pLuma[cp->width * (y + 1) + x] / qStep);
+			cp->pLuma[cp->width * (y + 1) + x + 1] = (s16)round((double)cp->pLuma[cp->width * (y + 1) + x + 1] / qStep);
 		}
 	}
-	for (u8 y = 0; y < stu.vscu->height; y++)
+
+	if (cp->chromaSub != CHROMA_400)
 	{
-		for (u8 x = 0; x < stu.vscu->width; x++)
+		for (u8 y = 0; y < cp->height; y += 2)
 		{
-			stu.vscu->scbLuma[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbLuma[stu.vscu->stride * y + x] / qp + 0.5);
-			stu.vscu->scbChroma1[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma1[stu.vscu->stride * y + x] / qp + 0.5);
-			stu.vscu->scbChroma2[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma2[stu.vscu->stride * y + x] / qp + 0.5);
+			for (u8 x = 0; x < cp->width; x += 2)
+			{
+				cp->pChroma1[cp->width * y + x + 1] = (s16)round((double)cp->pChroma1[cp->width * y + x + 1] / qStep);
+				cp->pChroma1[cp->width * (y + 1) + x] = (s16)round((double)cp->pChroma1[cp->width * (y + 1) + x] / qStep);
+				cp->pChroma1[cp->width * (y + 1) + x + 1] = (s16)round((double)cp->pChroma1[cp->width * (y + 1) + x + 1] / qStep);
+
+				cp->pChroma2[cp->width * y + x + 1] = (s16)round((double)cp->pChroma2[cp->width * y + x + 1] / qStep);
+				cp->pChroma2[cp->width * (y + 1) + x] = (s16)round((double)cp->pChroma2[cp->width * (y + 1) + x] / qStep);
+				cp->pChroma2[cp->width * (y + 1) + x + 1] = (s16)round((double)cp->pChroma2[cp->width * (y + 1) + x + 1] / qStep);
+			}
 		}
 	}
 }
 
-void quantConst(rtuStruct &rtu, u16 qp)
+void dequantConst(cpStruct *cp, u16 qp)
 {
-	// Quantize all coefficients of the RTBs with the same factor
-	for (u8 y = 0; y < rtu.height; y++)
-	{
-#if !USE_8x8_RTB
-		if (y % 8 == 7)
-			continue;
-#endif
-		for (u8 x = 0; x < rtu.width; x++)
-		{
-			rtu.rtbLuma[rtu.stride * y + x] = coeffCast((double)rtu.rtbLuma[rtu.stride * y + x] / qp + 0.5);
-			rtu.rtbChroma1[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma1[rtu.stride * y + x] / qp + 0.5);
-			rtu.rtbChroma2[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma2[rtu.stride * y + x] / qp + 0.5);
+	// Calculate the scaling factor
+	double qStep = pow(2, ((double)qp - 4) / 6);
 
-#if !USE_8x8_RTB
-			if (x % 8 == 7)
-				continue;
-#endif
+	// Quantize all coefficients with the same factor
+	for (u8 y = 0; y < cp->height; y += 2)
+	{
+		for (u8 x = 0; x < cp->width; x += 2)
+		{
+			cp->pLuma[cp->width * y + x + 1] = coeffCast((double)cp->pLuma[cp->width * y + x + 1] * qStep);
+			cp->pLuma[cp->width * (y + 1) + x] = coeffCast((double)cp->pLuma[cp->width * (y + 1) + x] * qStep);
+			cp->pLuma[cp->width * (y + 1) + x + 1] = coeffCast((double)cp->pLuma[cp->width * (y + 1) + x + 1] * qStep);
 		}
 	}
-}
 
-void dequantConst(stuStruct &stu, u16 qp)
-{
-	// Dequantize all coefficients of the STBs with the same factor
-	for (u8 y = 0; y < stu.hscu->height; y++)
+	if (cp->chromaSub != CHROMA_400)
 	{
-		for (u8 x = 0; x < stu.hscu->width; x++)
+		for (u8 y = 0; y < cp->height; y += 2)
 		{
-			stu.hscu->scbLuma[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbLuma[stu.hscu->stride * y + x] * qp + 0.5);
-			stu.hscu->scbChroma1[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma1[stu.hscu->stride * y + x] * qp + 0.5);
-			stu.hscu->scbChroma2[stu.hscu->stride * y + x] = (s16)((double)stu.hscu->scbChroma2[stu.hscu->stride * y + x] * qp + 0.5);
-		}
-	}
-	for (u8 y = 0; y < stu.vscu->height; y++)
-	{
-		for (u8 x = 0; x < stu.vscu->width; x++)
-		{
-			stu.vscu->scbLuma[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbLuma[stu.vscu->stride * y + x] * qp + 0.5);
-			stu.vscu->scbChroma1[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma1[stu.vscu->stride * y + x] * qp + 0.5);
-			stu.vscu->scbChroma2[stu.vscu->stride * y + x] = (s16)((double)stu.vscu->scbChroma2[stu.vscu->stride * y + x] * qp + 0.5);
-		}
-	}
-}
+			for (u8 x = 0; x < cp->width; x += 2)
+			{
+				cp->pChroma1[cp->width * y + x + 1] = coeffCast((double)cp->pChroma1[cp->width * y + x + 1] * qStep);
+				cp->pChroma1[cp->width * (y + 1) + x] = coeffCast((double)cp->pChroma1[cp->width * (y + 1) + x] * qStep);
+				cp->pChroma1[cp->width * (y + 1) + x + 1] = coeffCast((double)cp->pChroma1[cp->width * (y + 1) + x + 1] * qStep);
 
-
-void dequantConst(rtuStruct &rtu, u16 qp)
-{
-	// Dequantize all coefficients of the RTBs with the same factor
-	for (u8 y = 0; y < rtu.height; y++)
-	{
-#if !USE_8x8_RTB
-		if (y % 8 == 7)
-			continue;
-#endif
-		for (u8 x = 0; x < rtu.width; x++)
-		{
-			rtu.rtbLuma[rtu.stride * y + x] = coeffCast((double)rtu.rtbLuma[rtu.stride * y + x] * qp + 0.5);
-			rtu.rtbChroma1[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma1[rtu.stride * y + x] * qp + 0.5);
-			rtu.rtbChroma2[rtu.stride * y + x] = coeffCast((double)rtu.rtbChroma2[rtu.stride * y + x] * qp + 0.5);
-
-#if !USE_8x8_RTB
-			if (x % 8 == 7)
-				continue;
-#endif
+				cp->pChroma2[cp->width * y + x + 1] = coeffCast((double)cp->pChroma2[cp->width * y + x + 1] * qStep + 0.5);
+				cp->pChroma2[cp->width * (y + 1) + x] = coeffCast((double)cp->pChroma2[cp->width * (y + 1) + x] * qStep + 0.5);
+				cp->pChroma2[cp->width * (y + 1) + x + 1] = coeffCast((double)cp->pChroma2[cp->width * (y + 1) + x + 1] * qStep);
+			}
 		}
 	}
 }
 
 s16 coeffCast(double val)
 {
+	val = round(val);
 	return (s16)((val < -32768) ? -32768 : ((val > 32767) ? 32767 : val));
 }

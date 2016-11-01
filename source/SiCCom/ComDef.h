@@ -40,96 +40,24 @@ enum PredType
 
 struct paramStruct
 {
-	u16 q1;
-	u16 q2;
+	u16 qp;
 	ChromaSub chromaSub;
 };
 
-struct cuStruct
+struct cpStruct
 {
-	s16 *cbLuma;
-	s16 *cbChroma1;
-	s16 *cbChroma2;
+	s16 *pLuma;
+	s16 *pChroma1;
+	s16 *pChroma2;
+
+	u8 *predMode;
 
 	u8 width;
 	u8 height;
-	u8 stride;
 	ChromaSub chromaSub;
 
-	cuStruct& operator-(cuStruct &rhs)
-	{
-		for (u16 i = 0; i < this->width * this->height; i++)
-		{
-			this->cbLuma[i] -= rhs.cbLuma[i];
-			this->cbChroma1[i] -= rhs.cbChroma1[i];
-			this->cbChroma2[i] -= rhs.cbChroma2[i];
-		}
-
-		return *this;
-	}
-
-	cuStruct& operator+(cuStruct &rhs)
-	{
-		for (u16 i = 0; i < this->width * this->height; i++)
-		{
-			this->cbLuma[i] += rhs.cbLuma[i];
-			this->cbChroma1[i] += rhs.cbChroma1[i];
-			this->cbChroma2[i] += rhs.cbChroma2[i];
-		}
-
-		return *this;
-	}
-};
-
-struct scuStruct
-{
-	s16 *scbLuma;
-	s16 *scbChroma1;
-	s16 *scbChroma2;
-
-	u8 width;
-	u8 height;
-	u8 stride;
-	ChromaSub chromaSub;
-};
-
-struct stuStruct
-{
-	scuStruct *vscu;
-	scuStruct *hscu;
-
-	u8 width;
-	u8 height;
-	u8 stride;
-	ChromaSub chromaSub;
-};
-
-struct puStruct
-{
-	cuStruct *cu;
-	u8 *modeLuma;
-	u8 *modeChroma;
-	ScanDir *scanLuma;
-	ScanDir *scanChroma;
-
-	u8 width;
-	u8 height;
-	u8 stride;
-	ChromaSub chromaSub;
-};
-
-struct rtuStruct
-{
-	s16 *rtbLuma;
-	s16 *rtbChroma1;
-	s16 *rtbChroma2;
-	ScanDir *scanLuma;
-	ScanDir *scanChroma;
-
-	u8 width;
-	u8 height;
-	u8 stride;
-	ChromaSub chromaSub;
+	cpStruct *larger;
+	cpStruct *smaller;
 };
 
 #endif
